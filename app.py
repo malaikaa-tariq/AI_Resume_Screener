@@ -218,7 +218,12 @@ def inject_current_year():
 
 @app.errorhandler(404)
 def page_not_found(_error):
-    return render_template("404.html"), 404
+    return "Page not found", 404
+
+
+@app.route("/favicon.ico")
+def favicon():
+    return "", 204
 
 
 @app.errorhandler(413)
@@ -235,8 +240,19 @@ def file_too_large(_error):
 # Public routes
 # ---------------------------------------------------------
 
-@app.route("/")
+@app.route("/", methods=["GET", "POST"])
 def home():
+    if request.method == "POST":
+        if current_user.is_authenticated:
+            return redirect(url_for("analyzer_page"))
+
+        flash(
+            "Please create an account or log in before analyzing a resume.",
+            "info",
+        )
+
+        return redirect(url_for("login"))
+
     if current_user.is_authenticated:
         return redirect(url_for("dashboard"))
 
