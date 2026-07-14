@@ -1,11 +1,10 @@
 import re
 from collections import Counter
+from math import sqrt
 from pathlib import Path
 
 from docx import Document
 from pypdf import PdfReader
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
 
 
 TECHNICAL_SKILLS = {
@@ -187,6 +186,8 @@ def extract_resume_text(
     file_path: Path,
     extension: str,
 ) -> str:
+    extension = extension.lower().strip(".")
+
     if extension == "pdf":
         return extract_pdf_text(file_path)
 
@@ -199,38 +200,54 @@ def extract_resume_text(
             errors="ignore",
         )
 
-    raise ValueError("Unsupported resume format.")
+    raise ValueError(
+        "Unsupported resume format. Please upload PDF, DOCX or TXT."
+    )
 
 
 def extract_pdf_text(file_path: Path) -> str:
-    reader = PdfReader(str(file_path))
+    try:
+        reader = PdfReader(str(file_path))
 
-    pages = [
-        page.extract_text() or ""
-        for page in reader.pages
-    ]
+        pages = [
+            page.extract_text() or ""
+            for page in reader.pages
+        ]
 
-    return "\n".join(pages)
+        return "\n".join(pages)
+
+    except Exception as error:
+        raise ValueError(
+            "The PDF could not be read. It may be damaged, encrypted or image-only."
+        ) from error
 
 
 def extract_docx_text(file_path: Path) -> str:
-    document = Document(str(file_path))
+    try:
+        document = Document(str(file_path))
 
-    paragraphs = [
-        paragraph.text
-        for paragraph in document.paragraphs
-    ]
+        paragraphs = [
+            paragraph.text
+            for paragraph in document.paragraphs
+        ]
 
-    table_text = []
+        table_text = []
 
-    for table in document.tables:
-        for row in table.rows:
-            table_text.extend(
-                cell.text
-                for cell in row.cells
-            )
+        for table in document.tables:
+            for row in table.rows:
+                table_text.extend(
+                    cell.text
+                    for cell in row.cells
+                )
 
-    return "\n".join(paragraphs + table_text)
+        return "\n".join(
+            paragraphs + table_text
+        )
+
+    except Exception as error:
+        raise ValueError(
+            "The DOCX file could not be read."
+        ) from error
 
 
 def normalize_text(text: str) -> str:
@@ -241,14 +258,14 @@ def normalize_text(text: str) -> str:
     ).strip()
 
 
-def tokenize(text: str):
+def tokenize(text: str) -> list[str]:
     return re.findall(
         r"[a-zA-Z][a-zA-Z0-9+.#/-]{1,}",
         text.lower(),
     )
 
 
-def detect_skills(text: str):
+def detect_skills(text: str) -> list[str]:
     normalized_text = normalize_text(text)
     detected = []
 
@@ -259,13 +276,16 @@ def detect_skills(text: str):
             rf"(?!\w)"
         )
 
-        if re.search(pattern, normalized_text):
+        if re.search(
+            pattern,
+            normalized_text,
+        ):
             detected.append(skill)
 
     return sorted(detected)
 
 
-def important_keywords(text: str):
+def important_keywords(text: str) -> list[str]:
     words = tokenize(text)
 
     filtered_words = [
@@ -291,32 +311,66 @@ def semantic_similarity(
     if not job_description.strip():
         return 0.0
 
-    try:
-        vectorizer = TfidfVectorizer(
-            stop_words="english",
-            ngram_range=(1, 2),
-            max_features=2500,
-        )
+    resume_words = [
+        word
+        for word in tokenize(resume_text)
+        if word not in STOP_WORDS
+    ]
 
-        matrix = vectorizer.fit_transform(
-            [resume_text, job_description]
-        )
+    job_words = [
+        word
+        for word in tokenize(job_description)
+        if word not in STOP_WORDS
+    ]
 
-        similarity = cosine_similarity(
-            matrix[0:1],
-            matrix[1:2],
-        )[0][0]
-
-        return float(similarity)
-
-    except ValueError:
+    if not resume_words or not job_words:
         return 0.0
+
+    resume_counts = Counter(resume_words)
+    job_counts = Counter(job_words)
+
+    shared_words = (
+        set(resume_counts)
+        & set(job_counts)
+    )
+
+    dot_product = sum(
+        resume_counts[word]
+        * job_counts[word]
+        for word in shared_words
+    )
+
+    resume_length = sqrt(
+        sum(
+            count ** 2
+            for count in resume_counts.values()
+        )
+    )
+
+    job_length = sqrt(
+        sum(
+            count ** 2
+            for count in job_counts.values()
+        )
+    )
+
+    if resume_length == 0 or job_length == 0:
+        return 0.0
+
+    similarity = dot_product / (
+        resume_length * job_length
+    )
+
+    return max(
+        0.0,
+        min(1.0, similarity),
+    )
 
 
 def calculate_job_match(
     resume_text: str,
     job_description: str,
-):
+) -> tuple[int, list[str], list[str]]:
     if not job_description.strip():
         return 0, [], []
 
@@ -345,23 +399,29 @@ def calculate_job_match(
         detect_skills(job_description)
     )
 
+    matching_job_skills = (
+        resume_skills & job_skills
+    )
+
     missing_skills = sorted(
         job_skills - resume_skills
     )
 
-    matching_job_skills = (
-        job_skills & resume_skills
+    if job_skills:
+        skill_score = (
+            len(matching_job_skills)
+            / len(job_skills)
+        ) * 100
+    else:
+        skill_score = keyword_score
+
+    semantic_score = (
+        semantic_similarity(
+            resume_text,
+            job_description,
+        )
+        * 100
     )
-
-    skill_score = (
-        len(matching_job_skills)
-        / max(len(job_skills), 1)
-    ) * 100 if job_skills else keyword_score
-
-    semantic_score = semantic_similarity(
-        resume_text,
-        job_description,
-    ) * 100
 
     final_match = round(
         semantic_score * 0.50
@@ -369,8 +429,13 @@ def calculate_job_match(
         + skill_score * 0.20
     )
 
+    final_match = min(
+        100,
+        max(0, final_match),
+    )
+
     return (
-        min(100, max(0, final_match)),
+        final_match,
         matching_keywords,
         missing_skills,
     )
@@ -379,7 +444,7 @@ def calculate_job_match(
 def analyze_resume(
     resume_text: str,
     job_description: str = "",
-):
+) -> dict:
     normalized_resume = normalize_text(
         resume_text
     )
@@ -467,8 +532,10 @@ def analyze_resume(
 
     if 350 <= word_count <= 900:
         length_score = 10
+
     elif 220 <= word_count <= 1100:
         length_score = 7
+
     else:
         length_score = 3
 
@@ -489,11 +556,12 @@ def analyze_resume(
     if phone_found:
         contact_score += 5
 
-    relevance_score = (
-        round(job_match * 0.23)
-        if job_description.strip()
-        else 16
-    )
+    if job_description.strip():
+        relevance_score = round(
+            job_match * 0.23
+        )
+    else:
+        relevance_score = 16
 
     final_score = (
         section_score
@@ -608,7 +676,9 @@ def analyze_resume(
         "score": final_score,
         "job_match": job_match,
         "word_count": word_count,
-        "keyword_count": len(matching_keywords),
+        "keyword_count": len(
+            matching_keywords
+        ),
         "detected_skills": detected_skills,
         "missing_skills": missing_skills,
         "strengths": strengths[:6],
