@@ -4,6 +4,8 @@ from pathlib import Path
 
 from docx import Document
 from pypdf import PdfReader
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 
 
 TECHNICAL_SKILLS = {
@@ -37,6 +39,7 @@ TECHNICAL_SKILLS = {
     "graphql",
     "machine learning",
     "deep learning",
+    "data science",
     "data analysis",
     "pandas",
     "numpy",
@@ -53,6 +56,16 @@ TECHNICAL_SKILLS = {
     "api integration",
     "responsive design",
     "software engineering",
+    "object oriented programming",
+    "oop",
+    "firebase",
+    "bootstrap",
+    "tailwind css",
+    "jenkins",
+    "ci/cd",
+    "devops",
+    "testing",
+    "unit testing",
 }
 
 PROFESSIONAL_SKILLS = {
@@ -66,35 +79,39 @@ PROFESSIONAL_SKILLS = {
     "collaboration",
     "agile",
     "scrum",
+    "adaptability",
+    "creativity",
+    "research",
+    "presentation",
 }
 
-ALL_SKILLS = (
-    TECHNICAL_SKILLS
-    | PROFESSIONAL_SKILLS
-)
+ALL_SKILLS = TECHNICAL_SKILLS | PROFESSIONAL_SKILLS
 
 ACTION_VERBS = {
+    "achieved",
+    "analyzed",
+    "automated",
     "built",
+    "collaborated",
     "created",
-    "developed",
+    "delivered",
+    "deployed",
     "designed",
+    "developed",
+    "engineered",
     "implemented",
     "improved",
     "increased",
-    "reduced",
-    "managed",
-    "led",
-    "launched",
-    "optimized",
-    "automated",
-    "delivered",
-    "collaborated",
-    "engineered",
-    "analyzed",
-    "organized",
-    "maintained",
     "integrated",
-    "deployed",
+    "launched",
+    "led",
+    "maintained",
+    "managed",
+    "optimized",
+    "organized",
+    "reduced",
+    "resolved",
+    "tested",
 }
 
 SECTION_PATTERNS = {
@@ -161,6 +178,8 @@ STOP_WORDS = {
     "must",
     "required",
     "preferred",
+    "responsibilities",
+    "requirements",
 }
 
 
@@ -169,14 +188,10 @@ def extract_resume_text(
     extension: str,
 ) -> str:
     if extension == "pdf":
-        return extract_pdf_text(
-            file_path
-        )
+        return extract_pdf_text(file_path)
 
     if extension == "docx":
-        return extract_docx_text(
-            file_path
-        )
+        return extract_docx_text(file_path)
 
     if extension == "txt":
         return file_path.read_text(
@@ -184,41 +199,38 @@ def extract_resume_text(
             errors="ignore",
         )
 
-    raise ValueError(
-        "Unsupported resume file format."
-    )
+    raise ValueError("Unsupported resume format.")
 
 
-def extract_pdf_text(
-    file_path: Path,
-) -> str:
-    reader = PdfReader(
-        str(file_path)
-    )
+def extract_pdf_text(file_path: Path) -> str:
+    reader = PdfReader(str(file_path))
 
-    pages = []
-
-    for page in reader.pages:
-        pages.append(
-            page.extract_text() or ""
-        )
+    pages = [
+        page.extract_text() or ""
+        for page in reader.pages
+    ]
 
     return "\n".join(pages)
 
 
-def extract_docx_text(
-    file_path: Path,
-) -> str:
-    document = Document(
-        str(file_path)
-    )
+def extract_docx_text(file_path: Path) -> str:
+    document = Document(str(file_path))
 
     paragraphs = [
         paragraph.text
         for paragraph in document.paragraphs
     ]
 
-    return "\n".join(paragraphs)
+    table_text = []
+
+    for table in document.tables:
+        for row in table.rows:
+            table_text.extend(
+                cell.text
+                for cell in row.cells
+            )
+
+    return "\n".join(paragraphs + table_text)
 
 
 def normalize_text(text: str) -> str:
@@ -237,10 +249,7 @@ def tokenize(text: str):
 
 
 def detect_skills(text: str):
-    normalized_text = normalize_text(
-        text
-    )
-
+    normalized_text = normalize_text(text)
     detected = []
 
     for skill in ALL_SKILLS:
@@ -250,16 +259,13 @@ def detect_skills(text: str):
             rf"(?!\w)"
         )
 
-        if re.search(
-            pattern,
-            normalized_text,
-        ):
+        if re.search(pattern, normalized_text):
             detected.append(skill)
 
     return sorted(detected)
 
 
-def get_important_keywords(text: str):
+def important_keywords(text: str):
     words = tokenize(text)
 
     filtered_words = [
@@ -269,15 +275,42 @@ def get_important_keywords(text: str):
         and len(word) > 2
     ]
 
-    word_frequency = Counter(
-        filtered_words
-    )
+    frequency = Counter(filtered_words)
 
     return [
         word
         for word, _count
-        in word_frequency.most_common(40)
+        in frequency.most_common(45)
     ]
+
+
+def semantic_similarity(
+    resume_text: str,
+    job_description: str,
+) -> float:
+    if not job_description.strip():
+        return 0.0
+
+    try:
+        vectorizer = TfidfVectorizer(
+            stop_words="english",
+            ngram_range=(1, 2),
+            max_features=2500,
+        )
+
+        matrix = vectorizer.fit_transform(
+            [resume_text, job_description]
+        )
+
+        similarity = cosine_similarity(
+            matrix[0:1],
+            matrix[1:2],
+        )[0][0]
+
+        return float(similarity)
+
+    except ValueError:
+        return 0.0
 
 
 def calculate_job_match(
@@ -288,47 +321,56 @@ def calculate_job_match(
         return 0, [], []
 
     resume_keywords = set(
-        get_important_keywords(
-            resume_text
-        )
+        important_keywords(resume_text)
     )
 
     job_keywords = set(
-        get_important_keywords(
-            job_description
-        )
+        important_keywords(job_description)
     )
 
     matching_keywords = sorted(
-        resume_keywords
-        & job_keywords
+        resume_keywords & job_keywords
     )
 
-    job_match = round(
-        (
-            len(matching_keywords)
-            / max(len(job_keywords), 1)
-        )
-        * 100
-    )
+    keyword_score = (
+        len(matching_keywords)
+        / max(len(job_keywords), 1)
+    ) * 100
 
     resume_skills = set(
         detect_skills(resume_text)
     )
 
     job_skills = set(
-        detect_skills(
-            job_description
-        )
+        detect_skills(job_description)
     )
 
     missing_skills = sorted(
-        job_skills
-        - resume_skills
+        job_skills - resume_skills
+    )
+
+    matching_job_skills = (
+        job_skills & resume_skills
+    )
+
+    skill_score = (
+        len(matching_job_skills)
+        / max(len(job_skills), 1)
+    ) * 100 if job_skills else keyword_score
+
+    semantic_score = semantic_similarity(
+        resume_text,
+        job_description,
+    ) * 100
+
+    final_match = round(
+        semantic_score * 0.50
+        + keyword_score * 0.30
+        + skill_score * 0.20
     )
 
     return (
-        job_match,
+        min(100, max(0, final_match)),
         matching_keywords,
         missing_skills,
     )
@@ -342,32 +384,24 @@ def analyze_resume(
         resume_text
     )
 
-    resume_words = tokenize(
-        resume_text
-    )
-
-    word_count = len(
-        resume_words
-    )
+    resume_words = tokenize(resume_text)
+    word_count = len(resume_words)
 
     detected_skills = detect_skills(
         resume_text
     )
 
-    detected_sections = []
-
-    for section, pattern in (
-        SECTION_PATTERNS.items()
-    ):
+    detected_sections = [
+        section
+        for section, pattern
+        in SECTION_PATTERNS.items()
         if re.search(
             pattern,
             normalized_resume,
-        ):
-            detected_sections.append(
-                section
-            )
+        )
+    ]
 
-    detected_action_verbs = sorted(
+    action_verbs = sorted(
         {
             verb
             for verb in ACTION_VERBS
@@ -379,6 +413,20 @@ def analyze_resume(
         r"\b\d+(?:\.\d+)?%"
         r"|\b\d+\+?\b",
         resume_text,
+    )
+
+    email_found = bool(
+        re.search(
+            r"[\w.+-]+@[\w-]+\.[\w.-]+",
+            resume_text,
+        )
+    )
+
+    phone_found = bool(
+        re.search(
+            r"(?:\+?\d[\d\s()-]{7,}\d)",
+            resume_text,
+        )
     )
 
     (
@@ -409,42 +457,50 @@ def analyze_resume(
             len(detected_sections)
             / len(SECTION_PATTERNS)
         )
-        * 25
+        * 22
     )
 
-    skills_score = min(
-        25,
-        len(detected_skills) * 3,
+    skill_score = min(
+        20,
+        len(detected_skills) * 2,
     )
 
     if 350 <= word_count <= 900:
         length_score = 10
     elif 220 <= word_count <= 1100:
-        length_score = 6
+        length_score = 7
     else:
         length_score = 3
 
     impact_score = min(
-        10,
-        len(detected_action_verbs)
+        15,
+        len(action_verbs)
         + min(
             len(measurable_results),
-            5,
+            7,
         ),
     )
 
-    if job_description.strip():
-        relevance_score = round(
-            job_match * 0.30
-        )
-    else:
-        relevance_score = 18
+    contact_score = 0
+
+    if email_found:
+        contact_score += 5
+
+    if phone_found:
+        contact_score += 5
+
+    relevance_score = (
+        round(job_match * 0.23)
+        if job_description.strip()
+        else 16
+    )
 
     final_score = (
         section_score
-        + skills_score
+        + skill_score
         + length_score
         + impact_score
+        + contact_score
         + relevance_score
     )
 
@@ -457,22 +513,27 @@ def analyze_resume(
 
     if len(detected_sections) >= 5:
         strengths.append(
-            "Your resume contains most of the essential recruiter-friendly sections."
+            "Your resume includes most essential recruiter-friendly sections."
         )
 
-    if len(detected_skills) >= 6:
+    if len(detected_skills) >= 7:
         strengths.append(
-            "Your resume shows a useful combination of technical and professional skills."
+            "You present a useful mix of technical and professional skills."
         )
 
-    if len(detected_action_verbs) >= 5:
+    if len(action_verbs) >= 5:
         strengths.append(
-            "Your resume uses strong action-oriented language."
+            "Your content uses strong action-oriented language."
         )
 
     if measurable_results:
         strengths.append(
-            "Your resume includes measurable numbers that make achievements more credible."
+            "You include measurable figures that make achievements more credible."
+        )
+
+    if email_found and phone_found:
+        strengths.append(
+            "Your essential contact information is clearly detectable."
         )
 
     if (
@@ -480,58 +541,58 @@ def analyze_resume(
         and job_match >= 55
     ):
         strengths.append(
-            "Your resume has a good keyword match with the selected job description."
+            "Your resume has a solid match with the selected job description."
         )
 
     if not strengths:
         strengths.append(
-            "Your resume provides a useful foundation that can be improved with clearer evidence and structure."
+            "Your resume provides a useful foundation that can be improved with clearer evidence."
         )
 
     improvements = []
 
     missing_sections = [
         section
-        for section
-        in SECTION_PATTERNS
+        for section in SECTION_PATTERNS
         if section not in detected_sections
     ]
 
     if missing_sections:
         improvements.append(
             "Add or clearly label these sections: "
-            + ", ".join(
-                missing_sections[:3]
-            )
+            + ", ".join(missing_sections[:3])
             + "."
         )
 
-    if len(detected_action_verbs) < 4:
+    if len(action_verbs) < 4:
         improvements.append(
-            "Start more bullet points with strong action verbs such as developed, led, improved, created or automated."
+            "Start more bullet points with strong verbs such as developed, led, improved or automated."
         )
 
     if not measurable_results:
         improvements.append(
-            "Add numbers, percentages, users, project size or time saved to show measurable impact."
+            "Add numbers, percentages, users, project scale or time saved to prove impact."
         )
 
     if word_count < 300:
         improvements.append(
-            "Add more detail about projects, responsibilities and outcomes because the resume is currently short."
+            "Add more evidence about projects, responsibilities and outcomes."
         )
 
     elif word_count > 1000:
         improvements.append(
-            "Reduce repetition and keep the resume concise, ideally around one or two pages."
+            "Reduce repetition and keep the resume concise, ideally one or two pages."
+        )
+
+    if not email_found or not phone_found:
+        improvements.append(
+            "Ensure your email address and phone number are clearly visible."
         )
 
     if missing_skills:
         improvements.append(
-            "Consider adding genuine experience related to these skills: "
-            + ", ".join(
-                missing_skills[:5]
-            )
+            "Consider demonstrating relevant experience with: "
+            + ", ".join(missing_skills[:5])
             + "."
         )
 
@@ -540,18 +601,16 @@ def analyze_resume(
         and job_match < 45
     ):
         improvements.append(
-            "Tailor your professional summary, skills and experience bullets more closely to the job description."
+            "Tailor your summary, skills and experience bullets more closely to the job description."
         )
 
     return {
         "score": final_score,
         "job_match": job_match,
         "word_count": word_count,
-        "keyword_count": len(
-            matching_keywords
-        ),
+        "keyword_count": len(matching_keywords),
         "detected_skills": detected_skills,
         "missing_skills": missing_skills,
-        "strengths": strengths[:5],
-        "improvements": improvements[:6],
+        "strengths": strengths[:6],
+        "improvements": improvements[:7],
     }

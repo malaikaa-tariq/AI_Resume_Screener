@@ -1,170 +1,127 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign Up - AI Resume Screener</title>
-    <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
+{% extends "base.html" %}
 
-        body {
-            background-color: #f3f4f6;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            color: #1f2937;
-            padding: 2rem 0;
-        }
+{% block title %}
+Create Account — ResumeIQ
+{% endblock %}
 
-        .card {
-            background: #ffffff;
-            padding: 2.5rem;
-            border-radius: 12px;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-            width: 100%;
-            max-width: 420px;
-        }
+{% block content %}
 
-        .header {
-            text-align: center;
-            margin-bottom: 1.75rem;
-        }
+<section class="auth-layout container">
+    <div class="auth-intro">
+        <span class="eyebrow">
+            Start improving today
+        </span>
 
-        .header h2 {
-            font-size: 1.8rem;
-            color: #1e3a8a;
-            margin-bottom: 0.5rem;
-        }
+        <h1>
+            Your next opportunity deserves a stronger resume.
+        </h1>
 
-        .header p {
-            color: #6b7280;
-            font-size: 0.9rem;
-        }
+        <p>
+            Create your private workspace and turn
+            each resume review into measurable progress.
+        </p>
 
-        .alert-error {
-            background-color: #fee2e2;
-            border-left: 4px solid #ef4444;
-            color: #b91c1c;
-            padding: 0.75rem 1rem;
-            border-radius: 6px;
-            margin-bottom: 1.5rem;
-            font-size: 0.875rem;
-        }
-
-        .form-group {
-            margin-bottom: 1.25rem;
-        }
-
-        .form-group label {
-            display: block;
-            font-size: 0.875rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-            color: #374151;
-        }
-
-        .form-group input {
-            width: 100%;
-            padding: 0.75rem 1rem;
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            font-size: 0.95rem;
-            transition: all 0.2s ease;
-            outline: none;
-        }
-
-        .form-group input:focus {
-            border-color: #2563eb;
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
-        }
-
-        .btn-submit {
-            width: 100%;
-            padding: 0.8rem;
-            background-color: #2563eb;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background-color 0.2s ease;
-            margin-top: 0.5rem;
-        }
-
-        .btn-submit:hover {
-            background-color: #1d4ed8;
-        }
-
-        .footer-text {
-            text-align: center;
-            margin-top: 1.5rem;
-            font-size: 0.875rem;
-            color: #6b7280;
-        }
-
-        .footer-text a {
-            color: #2563eb;
-            text-decoration: none;
-            font-weight: 600;
-        }
-
-        .footer-text a:hover {
-            text-decoration: underline;
-        }
-    </style>
-</head>
-<body>
-
-    <div class="card">
-        <div class="header">
-            <h2>Get Started</h2>
-            <p>Create an account to screen resumes with AI</p>
-        </div>
-
-        <!-- Flash messages for validation errors -->
-        {% with messages = get_flashed_messages(with_categories=true) %}
-          {% if messages %}
-            {% for category, message in messages %}
-              <div class="alert-error">
-                {{ message }}
-              </div>
-            {% endfor %}
-          {% endif %}
-        {% endwith %}
-
-        <form action="/signup" method="POST">
-            <div class="form-group">
-                <label for="full_name">Full Name</label>
-                <input type="text" id="full_name" name="full_name" placeholder="John Doe" required>
-            </div>
-
-            <div class="form-group">
-                <label for="email">Email Address</label>
-                <input type="email" id="email" name="email" placeholder="you@example.com" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="password">Password (min 8 chars)</label>
-                <input type="password" id="password" name="password" placeholder="••••••••" required>
-            </div>
-
-            <div class="form-group">
-                <label for="confirm_password">Confirm Password</label>
-                <input type="password" id="confirm_password" name="confirm_password" placeholder="••••••••" required>
-            </div>
-            
-            <button type="submit" class="btn-submit">Create Account</button>
-        </form>
-        
-        <p class="footer-text">Already have an account? <a href="/login">Sign in here</a></p>
+        <ul class="benefit-list">
+            <li>Resume scoring and section detection</li>
+            <li>Job-description matching</li>
+            <li>Personal analysis history</li>
+            <li>Actionable improvement recommendations</li>
+        </ul>
     </div>
 
-</body>
-</html>
+    <form
+        class="auth-card"
+        method="POST"
+    >
+        <header class="form-heading">
+            <span>Free account</span>
+            <h2>Create your workspace</h2>
+            <p>Enter your details to get started.</p>
+        </header>
+
+        <label>
+            Full name
+
+            <input
+                type="text"
+                name="full_name"
+                placeholder="Enter your full name"
+                required
+                autocomplete="name"
+            >
+        </label>
+
+        <label>
+            Email address
+
+            <input
+                type="email"
+                name="email"
+                placeholder="you@example.com"
+                required
+                autocomplete="email"
+            >
+        </label>
+
+        <label>
+            Password
+
+            <div class="password-field">
+                <input
+                    type="password"
+                    name="password"
+                    placeholder="Minimum 8 characters"
+                    minlength="8"
+                    required
+                    autocomplete="new-password"
+                >
+
+                <button
+                    class="password-toggle"
+                    type="button"
+                >
+                    Show
+                </button>
+            </div>
+        </label>
+
+        <label>
+            Confirm password
+
+            <div class="password-field">
+                <input
+                    type="password"
+                    name="confirm_password"
+                    placeholder="Repeat your password"
+                    minlength="8"
+                    required
+                    autocomplete="new-password"
+                >
+
+                <button
+                    class="password-toggle"
+                    type="button"
+                >
+                    Show
+                </button>
+            </div>
+        </label>
+
+        <button
+            class="button primary full-width"
+            type="submit"
+        >
+            Create my account
+        </button>
+
+        <p class="form-footer">
+            Already registered?
+
+            <a href="{{ url_for('login') }}">
+                Login
+            </a>
+        </p>
+    </form>
+</section>
+
+{% endblock %}

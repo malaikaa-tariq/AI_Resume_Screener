@@ -1,7 +1,7 @@
 import json
 import os
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from flask import (
@@ -27,10 +27,6 @@ from werkzeug.utils import secure_filename
 from analyzer import analyze_resume, extract_resume_text
 
 
-# ---------------------------------------------------------
-# Application configuration
-# ---------------------------------------------------------
-
 BASE_DIR = Path(__file__).resolve().parent
 INSTANCE_DIR = BASE_DIR / "instance"
 UPLOAD_DIR = BASE_DIR / "static" / "uploads"
@@ -38,17 +34,20 @@ UPLOAD_DIR = BASE_DIR / "static" / "uploads"
 INSTANCE_DIR.mkdir(exist_ok=True)
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
+
+def utc_now():
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
 app = Flask(__name__)
 
 app.config["SECRET_KEY"] = os.environ.get(
     "SECRET_KEY",
-    "change-this-secret-key-before-production",
+    "resumeiq-local-development-key",
 )
-
 app.config["SQLALCHEMY_DATABASE_URI"] = (
     f"sqlite:///{INSTANCE_DIR / 'resume_screener.db'}"
 )
-
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024
 
@@ -61,10 +60,6 @@ login_manager.login_message_category = "info"
 
 ALLOWED_EXTENSIONS = {"pdf", "docx", "txt"}
 
-
-# ---------------------------------------------------------
-# Database models
-# ---------------------------------------------------------
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -88,7 +83,7 @@ class User(UserMixin, db.Model):
 
     created_at = db.Column(
         db.DateTime,
-        default=datetime.utcnow,
+        default=utc_now,
         nullable=False,
     )
 
@@ -168,7 +163,7 @@ class ResumeAnalysis(db.Model):
 
     created_at = db.Column(
         db.DateTime,
-        default=datetime.utcnow,
+        default=utc_now,
         nullable=False,
     )
 
@@ -180,23 +175,19 @@ class ResumeAnalysis(db.Model):
 
     def get_list(self, field_name):
         try:
-            return json.loads(getattr(self, field_name))
-        except (json.JSONDecodeError, TypeError):
+            value = getattr(self, field_name)
+            return json.loads(value)
+        except (AttributeError, TypeError, json.JSONDecodeError):
             return []
 
 
-# ---------------------------------------------------------
-# Login manager
-# ---------------------------------------------------------
-
 @login_manager.user_loader
 def load_user(user_id):
-    return db.session.get(User, int(user_id))
+    try:
+        return db.session.get(User, int(user_id))
+    except (TypeError, ValueError):
+        return None
 
-
-# ---------------------------------------------------------
-# Helper functions
-# ---------------------------------------------------------
 
 def allowed_file(filename):
     return (
@@ -206,19 +197,24 @@ def allowed_file(filename):
 
 
 @app.context_processor
-def inject_current_year():
+def inject_global_values():
     return {
-        "current_year": datetime.utcnow().year
+        "current_year": datetime.now(timezone.utc).year,
     }
 
 
-# ---------------------------------------------------------
-# Error handlers
-# ---------------------------------------------------------
-
 @app.errorhandler(404)
 def page_not_found(_error):
-    return "Page not found", 404
+    return render_template("404.html"), 404
+
+
+@app.errorhandler(413)
+def file_too_large(_error):
+    flash(
+        "The selected file is too large. Maximum size is 10 MB.",
+        "error",
+    )
+    return redirect(url_for("analyzer_page"))
 
 
 @app.route("/favicon.ico")
@@ -226,33 +222,8 @@ def favicon():
     return "", 204
 
 
-@app.errorhandler(413)
-def file_too_large(_error):
-    flash(
-        "The selected file is larger than 10 MB.",
-        "error",
-    )
-
-    return redirect(url_for("analyzer_page"))
-
-
-# ---------------------------------------------------------
-# Public routes
-# ---------------------------------------------------------
-
-@app.route("/", methods=["GET", "POST"])
+@app.route("/")
 def home():
-    if request.method == "POST":
-        if current_user.is_authenticated:
-            return redirect(url_for("analyzer_page"))
-
-        flash(
-            "Please create an account or log in before analyzing a resume.",
-            "info",
-        )
-
-        return redirect(url_for("login"))
-
     if current_user.is_authenticated:
         return redirect(url_for("dashboard"))
 
@@ -265,37 +236,16 @@ def signup():
         return redirect(url_for("dashboard"))
 
     if request.method == "POST":
-        full_name = request.form.get(
-            "full_name",
-            "",
-        ).strip()
-
-        email = request.form.get(
-            "email",
-            "",
-        ).strip().lower()
-
-        password = request.form.get(
-            "password",
-            "",
-        )
-
-        confirm_password = request.form.get(
-            "confirm_password",
-            "",
-        )
+        full_name = request.form.get("full_name", "").strip()
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
+        confirm_password = request.form.get("confirm_password", "")
 
         if len(full_name) < 2:
-            flash(
-                "Please enter your full name.",
-                "error",
-            )
+            flash("Please enter your full name.", "error")
 
         elif "@" not in email or "." not in email:
-            flash(
-                "Please enter a valid email address.",
-                "error",
-            )
+            flash("Please enter a valid email address.", "error")
 
         elif len(password) < 8:
             flash(
@@ -304,10 +254,7 @@ def signup():
             )
 
         elif password != confirm_password:
-            flash(
-                "Passwords do not match.",
-                "error",
-            )
+            flash("Passwords do not match.", "error")
 
         elif User.query.filter_by(email=email).first():
             flash(
@@ -343,38 +290,17 @@ def login():
         return redirect(url_for("dashboard"))
 
     if request.method == "POST":
-        email = request.form.get(
-            "email",
-            "",
-        ).strip().lower()
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
+        remember = request.form.get("remember") == "on"
 
-        password = request.form.get(
-            "password",
-            "",
-        )
+        user = User.query.filter_by(email=email).first()
 
-        remember = (
-            request.form.get("remember") == "on"
-        )
-
-        user = User.query.filter_by(
-            email=email
-        ).first()
-
-        if not user:
-            flash(
-                "No account was found with this email.",
-                "error",
-            )
-
-        elif not check_password_hash(
+        if not user or not check_password_hash(
             user.password_hash,
             password,
         ):
-            flash(
-                "Incorrect password.",
-                "error",
-            )
+            flash("Incorrect email address or password.", "error")
 
         else:
             login_user(
@@ -382,8 +308,10 @@ def login():
                 remember=remember,
             )
 
+            first_name = user.full_name.split()[0]
+
             flash(
-                f"Welcome back, {user.full_name.split()[0]}!",
+                f"Welcome back, {first_name}!",
                 "success",
             )
 
@@ -405,10 +333,6 @@ def logout():
     return redirect(url_for("home"))
 
 
-# ---------------------------------------------------------
-# Dashboard
-# ---------------------------------------------------------
-
 @app.route("/dashboard")
 @login_required
 def dashboard():
@@ -421,25 +345,24 @@ def dashboard():
 
     total_analyses = len(analyses)
 
-    if total_analyses:
-        average_score = round(
+    average_score = (
+        round(
             sum(item.score for item in analyses)
             / total_analyses
         )
+        if total_analyses
+        else 0
+    )
 
-        best_score = max(
-            item.score for item in analyses
-        )
-    else:
-        average_score = 0
-        best_score = 0
+    best_score = max(
+        (item.score for item in analyses),
+        default=0,
+    )
 
     skill_frequency = {}
 
     for analysis in analyses:
-        for skill in analysis.get_list(
-            "detected_skills"
-        ):
+        for skill in analysis.get_list("detected_skills"):
             skill_frequency[skill] = (
                 skill_frequency.get(skill, 0) + 1
             )
@@ -452,8 +375,7 @@ def dashboard():
 
     return render_template(
         "dashboard.html",
-        analyses=analyses,
-        recent_analyses=analyses[:4],
+        recent_analyses=analyses[:5],
         total_analyses=total_analyses,
         average_score=average_score,
         best_score=best_score,
@@ -461,57 +383,26 @@ def dashboard():
     )
 
 
-# ---------------------------------------------------------
-# Resume analyzer
-# ---------------------------------------------------------
-
-@app.route(
-    "/analyzer",
-    methods=["GET", "POST"],
-)
+@app.route("/analyzer", methods=["GET", "POST"])
 @login_required
 def analyzer_page():
     if request.method == "POST":
-        uploaded_file = request.files.get(
-            "resume"
-        )
-
+        uploaded_file = request.files.get("resume")
         job_description = request.form.get(
             "job_description",
             "",
         ).strip()
 
-        if not uploaded_file:
-            flash(
-                "Please select a resume file.",
-                "error",
-            )
+        if not uploaded_file or not uploaded_file.filename:
+            flash("Please select a resume file.", "error")
+            return redirect(url_for("analyzer_page"))
 
-            return redirect(
-                url_for("analyzer_page")
-            )
-
-        if not uploaded_file.filename:
-            flash(
-                "Please select a resume file.",
-                "error",
-            )
-
-            return redirect(
-                url_for("analyzer_page")
-            )
-
-        if not allowed_file(
-            uploaded_file.filename
-        ):
+        if not allowed_file(uploaded_file.filename):
             flash(
                 "Only PDF, DOCX and TXT files are supported.",
                 "error",
             )
-
-            return redirect(
-                url_for("analyzer_page")
-            )
+            return redirect(url_for("analyzer_page"))
 
         original_filename = secure_filename(
             uploaded_file.filename
@@ -526,9 +417,7 @@ def analyzer_page():
             f"{uuid.uuid4().hex}_{original_filename}"
         )
 
-        file_path = (
-            UPLOAD_DIR / stored_filename
-        )
+        file_path = UPLOAD_DIR / stored_filename
 
         uploaded_file.save(file_path)
 
@@ -567,9 +456,7 @@ def analyzer_page():
                 improvements=json.dumps(
                     result["improvements"]
                 ),
-                job_description=(
-                    job_description or None
-                ),
+                job_description=job_description or None,
                 user_id=current_user.id,
             )
 
@@ -598,18 +485,10 @@ def analyzer_page():
                 "error",
             )
 
-    return render_template(
-        "analyzer.html"
-    )
+    return render_template("analyzer.html")
 
 
-# ---------------------------------------------------------
-# Results
-# ---------------------------------------------------------
-
-@app.route(
-    "/results/<int:analysis_id>"
-)
+@app.route("/results/<int:analysis_id>")
 @login_required
 def analysis_result(analysis_id):
     analysis = (
@@ -630,18 +509,10 @@ def analysis_result(analysis_id):
         missing_skills=analysis.get_list(
             "missing_skills"
         ),
-        strengths=analysis.get_list(
-            "strengths"
-        ),
-        improvements=analysis.get_list(
-            "improvements"
-        ),
+        strengths=analysis.get_list("strengths"),
+        improvements=analysis.get_list("improvements"),
     )
 
-
-# ---------------------------------------------------------
-# History
-# ---------------------------------------------------------
 
 @app.route("/history")
 @login_required
@@ -674,10 +545,7 @@ def delete_analysis(analysis_id):
         .first_or_404()
     )
 
-    file_path = (
-        UPLOAD_DIR
-        / analysis.stored_filename
-    )
+    file_path = UPLOAD_DIR / analysis.stored_filename
 
     if file_path.exists():
         file_path.unlink()
@@ -693,14 +561,7 @@ def delete_analysis(analysis_id):
     return redirect(url_for("history"))
 
 
-# ---------------------------------------------------------
-# Profile
-# ---------------------------------------------------------
-
-@app.route(
-    "/profile",
-    methods=["GET", "POST"],
-)
+@app.route("/profile", methods=["GET", "POST"])
 @login_required
 def profile():
     if request.method == "POST":
@@ -710,10 +571,7 @@ def profile():
         ).strip()
 
         if len(full_name) < 2:
-            flash(
-                "Please enter a valid name.",
-                "error",
-            )
+            flash("Please enter a valid name.", "error")
 
         else:
             current_user.full_name = full_name
@@ -724,28 +582,14 @@ def profile():
                 "success",
             )
 
-            return redirect(
-                url_for("profile")
-            )
+            return redirect(url_for("profile"))
 
-    return render_template(
-        "profile.html"
-    )
+    return render_template("profile.html")
 
-
-# ---------------------------------------------------------
-# Create database
-# ---------------------------------------------------------
 
 with app.app_context():
     db.create_all()
 
 
-# ---------------------------------------------------------
-# Run application
-# ---------------------------------------------------------
-
 if __name__ == "__main__":
-    app.run(
-        debug=True,
-    )
+    app.run(debug=True)
