@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+
+{% block title %}
+Dashboard — ResumeIQ
+{% endblock %}
+
+{% block content %}
+
+<section class="dashboard-page container">
+    <header class="page-header">
+        <div>
+            <span class="eyebrow">
+                Career workspace
+            </span>
+
+            <h1>
+                Good to see you,
+                {{ current_user.full_name.split()[0] }}.
+            </h1>
+
+            <p>
+                Track your progress and prepare your next resume version.
+            </p>
+        </div>
+
+        <a
+            class="button primary"
+            href="{{ url_for('analyzer_page') }}"
+        >
+            New analysis
+            <span>+</span>
+        </a>
+    </header>
+
+    <div class="stat-grid">
+        <article class="stat-card">
+            <span>Total analyses</span>
+
+            <strong>
+                {{ total_analyses }}
+            </strong>
+
+            <small>
+                Saved in your workspace
+            </small>
+        </article>
+
+        <article class="stat-card">
+            <span>Average score</span>
+
+            <strong>
+                {{ average_score }}
+                <small>/100</small>
+            </strong>
+
+            <small>
+                Across all resume versions
+            </small>
+        </article>
+
+        <article class="stat-card">
+            <span>Best score</span>
+
+            <strong>
+                {{ best_score }}
+                <small>/100</small>
+            </strong>
+
+            <small>
+                Your strongest result
+            </small>
+        </article>
+
+        <article class="stat-card highlighted">
+            <span>Recommended action</span>
+
+            <strong>Analyze</strong>
+
+            <small>
+                Compare your resume with a new role
+            </small>
+        </article>
+    </div>
+
+    <div class="dashboard-grid">
+        <section class="panel">
+            <header class="panel-heading">
+                <div>
+                    <span class="eyebrow">
+                        Latest activity
+                    </span>
+
+                    <h2>
+                        Recent analyses
+                    </h2>
+                </div>
+
+                <a href="{{ url_for('history') }}">
+                    View all →
+                </a>
+            </header>
+
+            {% if recent_analyses %}
+                <div class="analysis-list">
+                    {% for item in recent_analyses %}
+                        <a
+                            class="analysis-item"
+                            href="{{ url_for('analysis_result', analysis_id=item.id) }}"
+                        >
+                            <span class="file-icon">
+                                {{ item.original_filename.rsplit('.', 1)[-1]|upper }}
+                            </span>
+
+                            <div class="analysis-name">
+                                <strong>
+                                    {{ item.original_filename }}
+                                </strong>
+
+                                <small>
+                                    {{ item.created_at.strftime('%d %b %Y, %I:%M %p') }}
+                                </small>
+                            </div>
+
+                            <div class="small-score">
+                                <strong>
+                                    {{ item.score }}
+                                </strong>
+
+                                <span>score</span>
+                            </div>
+
+                            <span class="item-arrow">
+                                →
+                            </span>
+                        </a>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <span>⌁</span>
+
+                    <h3>
+                        No analyses yet
+                    </h3>
+
+                    <p>
+                        Upload your first resume to generate
+                        a detailed report.
+                    </p>
+
+                    <a
+                        class="button primary"
+                        href="{{ url_for('analyzer_page') }}"
+                    >
+                        Analyze resume
+                    </a>
+                </div>
+            {% endif %}
+        </section>
+
+        <section class="panel">
+            <header class="panel-heading">
+                <div>
+                    <span class="eyebrow">
+                        Skill signal
+                    </span>
+
+                    <h2>
+                        Most detected skills
+                    </h2>
+                </div>
+            </header>
+
+            {% if top_skills %}
+                {% set highest = top_skills[0][1] %}
+
+                <div class="skill-bars">
+                    {% for skill, count in top_skills %}
+                        <article class="skill-bar">
+                            <div>
+                                <span>
+                                    {{ skill|title }}
+                                </span>
+
+                                <strong>
+                                    {{ count }}
+                                </strong>
+                            </div>
+
+                            <div
+                                class="progress-bar dynamic-progress"
+                                data-progress="{{ (count / highest * 100)|round }}"
+                            >
+                                <span></span>
+                            </div>
+                        </article>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-state small-empty">
+                    <span>✦</span>
+
+                    <p>
+                        Skill insights will appear after
+                        your first analysis.
+                    </p>
+                </div>
+            {% endif %}
+        </section>
+    </div>
+
+    <section class="guidance-panel">
+        <header>
+            <span class="eyebrow">
+                Quick guidance
+            </span>
+
+            <h2>
+                Three ways to improve your next score
+            </h2>
+        </header>
+
+        <div class="guidance-grid">
+            <article>
+                <strong>01</strong>
+
+                <h3>
+                    Tailor each version
+                </h3>
+
+                <p>
+                    Use the complete job description and
+                    prioritize matching responsibilities.
+                </p>
+            </article>
+
+            <article>
+                <strong>02</strong>
+
+                <h3>
+                    Prove your impact
+                </h3>
+
+                <p>
+                    Add numbers, users, percentages,
+                    time saved and project outcomes.
+                </p>
+            </article>
+
+            <article>
+                <strong>03</strong>
+
+                <h3>
+                    Use clear sections
+                </h3>
+
+                <p>
+                    Make skills, projects, experience
+                    and education easy to scan.
+                </p>
+            </article>
+        </div>
+    </section>
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document
+        .querySelectorAll(".dynamic-progress")
+        .forEach((progressBar) => {
+            const progressValue = Number(
+                progressBar.dataset.progress
+            );
+
+            const safeProgress = Math.min(
+                100,
+                Math.max(0, progressValue || 0)
+            );
+
+            const progressFill =
+                progressBar.querySelector("span");
+
+            if (progressFill) {
+                progressFill.style.width =
+                    `${safeProgress}%`;
+            }
+        });
+</script>
+{% endblock %}

@@ -1,54 +1,293 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Resume Upload</title>
-    <style>
-        body {
-            /* Aapki image ke double naam ke mutabiq link handle kar diya hai */
-            background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('/static/bg.jpg.jpg');
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            background-attachment: fixed;
-            color: white; /* Text white ho jayega taake dark bg par achha lage */
-            min-height: 100vh;
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            font-family: Arial, sans-serif;
-        }
+{% extends "base.html" %}
 
-        /* Form ko thoda center aur pyara karne ke liye styling */
-        form {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 30px;
-            border-radius: 10px;
-            backdrop-filter: blur(5px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            margin-top: 20px;
-        }
+{% block title %}
+ResumeIQ — Smarter Resume Analysis
+{% endblock %}
 
-        input[type="submit"] {
-            background-color: #28a745;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 5px;
-            cursor: pointer;
-            margin-left: 10px;
-        }
-    </style>
-</head>
-<body>
+{% block content %}
 
-    <h2>AI Resume Screener - Upload Section</h2>
-    
-    <form action="/" method="POST" enctype="multipart/form-data">
-        <input type="file" name="resume" accept=".pdf,.docx">
-        <input type="submit" value="Upload Now">
-    </form>
+<style>
+    /* Keeping your compressed background image & dark overlay intact! */
+    .hero-custom-bg {
+        background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('/static/bg.jpg');
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        background-attachment: fixed;
+        padding: 50px 0;
+        color: white;
+        width: 100%;
+    }
 
-</body>
-</html>
+    /* Your professional frosted-glass upload form styling */
+    .upload-form-container {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 20px;
+        border-radius: 10px;
+        backdrop-filter: blur(5px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        margin: 25px 0;
+        max-width: 480px;
+    }
+
+    .upload-submit-btn {
+        background-color: #28a745;
+        color: white;
+        border: none;
+        padding: 8px 18px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: bold;
+        margin-left: 10px;
+        transition: background 0.2s;
+    }
+
+    .upload-submit-btn:hover {
+        background-color: #218838;
+    }
+</style>
+
+<div class="hero-custom-bg">
+    <section class="hero container">
+        <div class="hero-content reveal">
+            <span class="eyebrow">
+                AI-powered career intelligence
+            </span>
+
+            <h1>
+                Turn your resume into a stronger
+                <span>career story.</span>
+            </h1>
+
+            <p>
+                Upload your resume, compare it with a real job
+                description and receive clear feedback on skills,
+                structure, keywords and measurable impact.
+            </p>
+
+            <!-- YOUR FUNCTIONAL UPLOAD FORM INTEGRATED HERE PERFECTLY -->
+            <div class="upload-form-container">
+                <form action="/" method="POST" enctype="multipart/form-data">
+                    <input type="file" name="resume" accept=".pdf,.docx" required>
+                    <input type="submit" value="Upload Now" class="upload-submit-btn">
+                </form>
+            </div>
+
+            <div class="button-row">
+                <a class="button primary" href="{{ url_for('signup') }}">
+                    Analyze my resume
+                    <span>→</span>
+                </a>
+
+                <a class="button secondary" href="#features">
+                    Explore features
+                </a>
+            </div>
+
+            <div class="trust-list">
+                <span>✓ Private workspace</span>
+                <span>✓ PDF and DOCX support</span>
+                <span>✓ Actionable feedback</span>
+            </div>
+        </div>
+
+        <div class="hero-visual reveal">
+            <article class="demo-analysis-card">
+                <header class="demo-card-header">
+                    <div>
+                        <small>Resume health</small>
+                        <strong>Software Engineer Resume</strong>
+                    </div>
+
+                    <span class="status-badge">
+                        Analyzed
+                    </span>
+                </header>
+
+                <div class="score-ring" style="--score: 86">
+                    <div>
+                        <strong>86</strong>
+                        <small>/100</small>
+                    </div>
+                </div>
+
+                <div class="metric-label">
+                    <span>Job match</span>
+                    <strong>78%</strong>
+                </div>
+
+                <div class="progress-bar">
+                    <span style="width: 78%"></span>
+                </div>
+
+                <div class="tag-list">
+                    <span>Python</span>
+                    <span>Flask</span>
+                    <span>SQL</span>
+                    <span>Git</span>
+                </div>
+
+                <div class="recommendation-card">
+                    <span>✦</span>
+
+                    <p>
+                        Add measurable impact to two project descriptions.
+                    </p>
+                </div>
+            </article>
+
+            <article class="floating-stat stat-one">
+                <strong>+24%</strong>
+                <span>keyword coverage</span>
+            </article>
+
+            <article class="floating-stat stat-two">
+                <strong>8</strong>
+                <span>skills detected</span>
+            </article>
+        </div>
+    </section>
+</div>
+
+<section class="audience-strip container">
+    <p>
+        Designed for students, graduates and growing professionals
+    </p>
+
+    <div>
+        <span>INTERNSHIPS</span>
+        <span>TECH ROLES</span>
+        <span>GRADUATE JOBS</span>
+        <span>CAREER SWITCHES</span>
+    </div>
+</section>
+
+<section class="section container" id="features">
+    <header class="section-heading reveal">
+        <span class="eyebrow">
+            Everything in one workspace
+        </span>
+
+        <h2>
+            More than a score. A clear improvement plan.
+        </h2>
+
+        <p>
+            Every report explains what is working,
+            what is missing and what to improve next.
+        </p>
+    </header>
+
+    <div class="feature-grid">
+        <article class="feature-card reveal">
+            <span class="feature-icon">◎</span>
+            <h3>Smart resume score</h3>
+
+            <p>
+                Evaluate structure, content depth, skills,
+                action language and measurable achievements.
+            </p>
+        </article>
+
+        <article class="feature-card reveal">
+            <span class="feature-icon">⌁</span>
+            <h3>Job match analysis</h3>
+
+            <p>
+                Compare your resume with a role and identify
+                important keyword and skill gaps.
+            </p>
+        </article>
+
+        <article class="feature-card reveal">
+            <span class="feature-icon">✦</span>
+            <h3>Skills intelligence</h3>
+
+            <p>
+                Detect technical and professional skills
+                from PDF, DOCX and TXT files.
+            </p>
+        </article>
+
+        <article class="feature-card reveal">
+            <span class="feature-icon">↗</span>
+            <h3>Progress dashboard</h3>
+
+            <p>
+                Save reports, monitor average scores
+                and revisit previous resume versions.
+            </p>
+        </article>
+
+        <article class="feature-card reveal">
+            <span class="feature-icon">▤</span>
+            <h3>Clear recommendations</h3>
+
+            <p>
+                Receive practical improvement steps instead
+                of confusing or generic feedback.
+            </p>
+        </article>
+
+        <article class="feature-card reveal">
+            <span class="feature-icon">◈</span>
+            <h3>Private account</h3>
+
+            <p>
+                Each user receives a separate dashboard
+                and personal analysis history.
+            </p>
+        </article>
+    </div>
+</section>
+
+<section class="section workflow-section container" id="workflow">
+    <header class="section-heading reveal">
+        <span class="eyebrow">
+            Simple workflow
+        </span>
+
+        <h2>
+            Improve your resume in three focused steps.
+        </h2>
+    </header>
+
+    <div class="workflow-grid">
+        <article class="workflow-card">
+            <span>01</span>
+            <h3>Upload resume</h3>
+            <p>Select your PDF, DOCX or TXT file.</p>
+        </article>
+
+        <article class="workflow-card">
+            <span>02</span>
+            <h3>Add a job description</h3>
+            <p>Paste the complete role for targeted matching.</p>
+        </article>
+
+        <article class="workflow-card">
+            <span>03</span>
+            <h3>Review your report</h3>
+            <p>See your score, skills, gaps and next actions.</p>
+        </article>
+    </div>
+</section>
+
+<section class="cta-panel container reveal">
+    <div>
+        <span class="eyebrow">
+            Ready for your next application?
+        </span>
+
+        <h2>
+            Make every resume version stronger than the last.
+        </h2>
+    </div>
+
+    <a class="button primary" href="{{ url_for('signup') }}">
+        Create free account
+        <span>→</span>
+    </a>
+</section>
+
+{% endblock %}

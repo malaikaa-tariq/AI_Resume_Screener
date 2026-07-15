@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+
+{% block title %}
+Resume Analyzer — ResumeIQ
+{% endblock %}
+
+{% block content %}
+
+<section class="analyzer-page container">
+    <header class="content-heading">
+        <span class="eyebrow">
+            Resume analyzer
+        </span>
+
+        <h1>
+            See what recruiters and screening systems may notice.
+        </h1>
+
+        <p>
+            Upload a resume and optionally paste a job description
+            for a targeted match report.
+        </p>
+    </header>
+
+    <form
+        class="analyzer-grid"
+        id="analysisForm"
+        method="POST"
+        enctype="multipart/form-data"
+    >
+        <section class="panel upload-panel">
+            <header class="step-heading">
+                <span>1</span>
+
+                <div>
+                    <strong>Upload resume</strong>
+                    <small>PDF, DOCX or TXT · maximum 10 MB</small>
+                </div>
+            </header>
+
+            <label
+                class="drop-zone"
+                id="dropZone"
+            >
+                <input
+                    id="resumeInput"
+                    type="file"
+                    name="resume"
+                    accept=".pdf,.docx,.txt"
+                    required
+                >
+
+                <span class="upload-icon">⇧</span>
+                <strong>Drop your resume here</strong>
+                <p>or click to browse from your computer</p>
+                <span class="choose-file-button">Choose file</span>
+            </label>
+
+            <article
+                class="selected-file"
+                id="selectedFile"
+                hidden
+            >
+                <span class="file-icon">DOC</span>
+
+                <div>
+                    <strong id="selectedFileName"></strong>
+                    <small id="selectedFileSize"></small>
+                </div>
+
+                <button
+                    id="removeFile"
+                    type="button"
+                    aria-label="Remove selected file"
+                >
+                    ×
+                </button>
+            </article>
+
+            <div class="information-box">
+                <span>◈</span>
+
+                <p>
+                    Uploaded files are connected only to your account
+                    and can be deleted from your history.
+                </p>
+            </div>
+        </section>
+
+        <section class="panel">
+            <header class="step-heading">
+                <span>2</span>
+
+                <div>
+                    <strong>Add job description</strong>
+                    <small>Optional but recommended</small>
+                </div>
+            </header>
+
+            <textarea
+                id="jobDescription"
+                name="job_description"
+                rows="14"
+                placeholder="Paste the responsibilities, requirements and skills from the job posting here..."
+            ></textarea>
+
+            <div class="textarea-footer">
+                <span id="characterCount">
+                    0 characters
+                </span>
+
+                <button
+                    id="clearDescription"
+                    type="button"
+                >
+                    Clear
+                </button>
+            </div>
+
+            <div class="tip-card">
+                <strong>Better matching tip</strong>
+
+                <p>
+                    Paste the complete job description instead
+                    of only the job title.
+                </p>
+            </div>
+        </section>
+
+        <section class="analysis-submit">
+            <div>
+                <strong>
+                    Ready to generate your report?
+                </strong>
+
+                <span>
+                    The analysis normally takes only a few seconds.
+                </span>
+            </div>
+
+            <button
+                class="button primary"
+                type="submit"
+            >
+                Analyze resume
+                <span>→</span>
+            </button>
+        </section>
+    </form>
+</section>
+
+<section
+    class="loading-overlay"
+    id="loadingOverlay"
+    hidden
+>
+    <article class="loading-card">
+        <div class="loader"></div>
+
+        <h2>Analyzing your resume</h2>
+
+        <p id="loadingText">
+            Reading resume content...
+        </p>
+
+        <div class="loading-progress">
+            <span></span>
+        </div>
+    </article>
+</section>
+
+{% endblock %}

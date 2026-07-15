@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+
+{% block title %}
+Analysis History — ResumeIQ
+{% endblock %}
+
+{% block content %}
+
+<section class="history-page container">
+    <header class="page-header">
+        <div>
+            <span class="eyebrow">
+                Saved reports
+            </span>
+
+            <h1>
+                Analysis history
+            </h1>
+
+            <p>
+                Review previous resume versions,
+                compare results and track your progress.
+            </p>
+        </div>
+
+        <a
+            class="button primary"
+            href="{{ url_for('analyzer_page') }}"
+        >
+            New analysis
+
+            <span aria-hidden="true">
+                +
+            </span>
+        </a>
+    </header>
+
+    {% if analyses %}
+        <section class="history-table panel">
+            <header class="history-row history-table-header">
+                <span>
+                    Resume
+                </span>
+
+                <span>
+                    Score
+                </span>
+
+                <span>
+                    Job match
+                </span>
+
+                <span>
+                    Date
+                </span>
+
+                <span>
+                    Actions
+                </span>
+            </header>
+
+            {% for item in analyses %}
+                <article class="history-row">
+                    <div class="history-file">
+                        <span class="file-icon">
+                            {{ item.original_filename.rsplit('.', 1)[-1]|upper }}
+                        </span>
+
+                        <div>
+                            <strong title="{{ item.original_filename }}">
+                                {{ item.original_filename }}
+                            </strong>
+
+                            <small>
+                                {{ item.word_count }} words
+                            </small>
+                        </div>
+                    </div>
+
+                    <strong
+                        class="
+                            score-badge
+                            {% if item.score >= 80 %}
+                                high
+                            {% elif item.score >= 60 %}
+                                medium
+                            {% else %}
+                                low
+                            {% endif %}
+                        "
+                    >
+                        {{ item.score }}
+                    </strong>
+
+                    <span>
+                        {{ item.job_match }}%
+                    </span>
+
+                    <span>
+                        {{ item.created_at.strftime('%d %b %Y') }}
+                    </span>
+
+                    <div class="row-actions">
+                        <a
+                            class="action-button open-button"
+                            href="{{ url_for('analysis_result', analysis_id=item.id) }}"
+                            title="Open analysis report"
+                        >
+                            <span aria-hidden="true">
+                                ↗
+                            </span>
+
+                            Open
+                        </a>
+
+                        <form
+                            method="POST"
+                            action="{{ url_for('delete_analysis', analysis_id=item.id) }}"
+                            onsubmit="return confirm('Are you sure you want to delete this analysis permanently?');"
+                        >
+                            <button
+                                class="action-button delete-button"
+                                type="submit"
+                                title="Delete analysis"
+                            >
+                                <span aria-hidden="true">
+                                    ×
+                                </span>
+
+                                Delete
+                            </button>
+                        </form>
+                    </div>
+                </article>
+            {% endfor %}
+        </section>
+    {% else %}
+        <section class="empty-state panel large-empty">
+            <span aria-hidden="true">
+                ▤
+            </span>
+
+            <h2>
+                Your analysis history is empty
+            </h2>
+
+            <p>
+                Completed resume reports will be saved here automatically.
+                Upload your first resume to begin tracking your progress.
+            </p>
+
+            <a
+                class="button primary"
+                href="{{ url_for('analyzer_page') }}"
+            >
+                Analyze first resume
+
+                <span aria-hidden="true">
+                    →
+                </span>
+            </a>
+        </section>
+    {% endif %}
+</section>
+
+{% endblock %}

@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block title %}
+Create Account — ResumeIQ
+{% endblock %}
+
+{% block content %}
+
+<section class="auth-layout container">
+    <div class="auth-intro">
+        <span class="eyebrow">
+            Start improving today
+        </span>
+
+        <h1>
+            Your next opportunity deserves a stronger resume.
+        </h1>
+
+        <p>
+            Create your private workspace and turn
+            each resume review into measurable progress.
+        </p>
+
+        <ul class="benefit-list">
+            <li>Resume scoring and section detection</li>
+            <li>Job-description matching</li>
+            <li>Personal analysis history</li>
+            <li>Actionable improvement recommendations</li>
+        </ul>
+    </div>
+
+    <form
+        class="auth-card"
+        method="POST"
+    >
+        <header class="form-heading">
+            <span>Free account</span>
+            <h2>Create your workspace</h2>
+            <p>Enter your details to get started.</p>
+        </header>
+
+        <label>
+            Full name
+
+            <input
+                type="text"
+                name="full_name"
+                placeholder="Enter your full name"
+                required
+                autocomplete="name"
+            >
+        </label>
+
+        <label>
+            Email address
+
+            <input
+                type="email"
+                name="email"
+                placeholder="you@example.com"
+                required
+                autocomplete="email"
+            >
+        </label>
+
+        <label>
+            Password
+
+            <div class="password-field">
+                <input
+                    type="password"
+                    name="password"
+                    placeholder="Minimum 8 characters"
+                    minlength="8"
+                    required
+                    autocomplete="new-password"
+                >
+
+                <button
+                    class="password-toggle"
+                    type="button"
+                >
+                    Show
+                </button>
+            </div>
+        </label>
+
+        <label>
+            Confirm password
+
+            <div class="password-field">
+                <input
+                    type="password"
+                    name="confirm_password"
+                    placeholder="Repeat your password"
+                    minlength="8"
+                    required
+                    autocomplete="new-password"
+                >
+
+                <button
+                    class="password-toggle"
+                    type="button"
+                >
+                    Show
+                </button>
+            </div>
+        </label>
+
+        <button
+            class="button primary full-width"
+            type="submit"
+        >
+            Create my account
+        </button>
+
+        <p class="form-footer">
+            Already registered?
+
+            <a href="{{ url_for('login') }}">
+                Login
+            </a>
+        </p>
+    </form>
+</section>
+
+{% endblock %}

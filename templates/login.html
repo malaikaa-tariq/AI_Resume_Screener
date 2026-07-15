@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block title %}
+Login — ResumeIQ
+{% endblock %}
+
+{% block content %}
+
+<section class="auth-layout container">
+    <div class="auth-intro">
+        <span class="eyebrow">
+            Welcome back
+        </span>
+
+        <h1>
+            Continue building a resume that gets noticed.
+        </h1>
+
+        <p>
+            Access your previous reports, scores,
+            skills and personalized recommendations.
+        </p>
+
+        <div class="auth-stats">
+            <article>
+                <span>Resume score</span>
+                <strong>86</strong>
+            </article>
+
+            <article>
+                <span>Skills found</span>
+                <strong>14</strong>
+            </article>
+
+            <article>
+                <span>Job match</span>
+                <strong>78%</strong>
+            </article>
+        </div>
+    </div>
+
+    <form
+        class="auth-card"
+        method="POST"
+    >
+        <header class="form-heading">
+            <span>Member login</span>
+            <h2>Welcome back</h2>
+            <p>Enter your account details to continue.</p>
+        </header>
+
+        <label>
+            Email address
+
+            <input
+                type="email"
+                name="email"
+                placeholder="you@example.com"
+                required
+                autocomplete="email"
+            >
+        </label>
+
+        <label>
+            Password
+
+            <div class="password-field">
+                <input
+                    type="password"
+                    name="password"
+                    placeholder="Enter your password"
+                    required
+                    autocomplete="current-password"
+                >
+
+                <button
+                    class="password-toggle"
+                    type="button"
+                >
+                    Show
+                </button>
+            </div>
+        </label>
+
+        <label class="checkbox-row">
+            <input
+                type="checkbox"
+                name="remember"
+            >
+
+            <span>Keep me signed in</span>
+        </label>
+
+        <button
+            class="button primary full-width"
+            type="submit"
+        >
+            Login to dashboard
+        </button>
+
+        <p class="form-footer">
+            New here?
+
+            <a href="{{ url_for('signup') }}">
+                Create an account
+            </a>
+        </p>
+    </form>
+</section>
+
+{% endblock %}
