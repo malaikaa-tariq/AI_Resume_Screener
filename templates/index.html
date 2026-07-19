@@ -6,106 +6,148 @@ ResumeIQ — Smarter Resume Analysis
 
 {% block content %}
 
-<section class="hero container">
-    <div class="hero-content reveal">
-        <span class="eyebrow">
-            AI-powered career intelligence
-        </span>
+<style>
+    /* Keeping your compressed background image & dark overlay intact! */
+    .hero-custom-bg {
+        background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('/static/bg.jpg');
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        background-attachment: fixed;
+        padding: 50px 0;
+        color: white;
+        width: 100%;
+    }
 
-        <h1>
-            Turn your resume into a stronger
-            <span>career story.</span>
-        </h1>
+    /* Your professional frosted-glass upload form styling */
+    .upload-form-container {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 20px;
+        border-radius: 10px;
+        backdrop-filter: blur(5px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        margin: 25px 0;
+        max-width: 480px;
+    }
 
-        <p>
-            Upload your resume, compare it with a real job
-            description and receive clear feedback on skills,
-            structure, keywords and measurable impact.
-        </p>
+    .upload-submit-btn {
+        background-color: #28a745;
+        color: white;
+        border: none;
+        padding: 8px 18px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: bold;
+        margin-left: 10px;
+        transition: background 0.2s;
+    }
 
-        <div class="button-row">
-            <a
-                class="button primary"
-                href="{{ url_for('signup') }}"
-            >
-                Analyze my resume
-                <span>→</span>
-            </a>
+    .upload-submit-btn:hover {
+        background-color: #218838;
+    }
+</style>
 
-            <a
-                class="button secondary"
-                href="#features"
-            >
-                Explore features
-            </a>
+<div class="hero-custom-bg">
+    <section class="hero container">
+        <div class="hero-content reveal">
+            <span class="eyebrow">
+                AI-powered career intelligence
+            </span>
+
+            <h1>
+                Turn your resume into a stronger
+                <span>career story.</span>
+            </h1>
+
+            <p>
+                Upload your resume, compare it with a real job
+                description and receive clear feedback on skills,
+                structure, keywords and measurable impact.
+            </p>
+
+            <!-- YOUR FUNCTIONAL UPLOAD FORM INTEGRATED HERE PERFECTLY -->
+            <div class="upload-form-container">
+                <form action="/" method="POST" enctype="multipart/form-data">
+                    <input type="file" name="resume" accept=".pdf,.docx" required>
+                    <input type="submit" value="Upload Now" class="upload-submit-btn">
+                </form>
+            </div>
+
+            <div class="button-row">
+                <a class="button primary" href="{{ url_for('signup') }}">
+                    Analyze my resume
+                    <span>→</span>
+                </a>
+
+                <a class="button secondary" href="#features">
+                    Explore features
+                </a>
+            </div>
+
+            <div class="trust-list">
+                <span>✓ Private workspace</span>
+                <span>✓ PDF and DOCX support</span>
+                <span>✓ Actionable feedback</span>
+            </div>
         </div>
 
-        <div class="trust-list">
-            <span>✓ Private workspace</span>
-            <span>✓ PDF and DOCX support</span>
-            <span>✓ Actionable feedback</span>
+        <div class="hero-visual reveal">
+            <article class="demo-analysis-card">
+                <header class="demo-card-header">
+                    <div>
+                        <small>Resume health</small>
+                        <strong>Software Engineer Resume</strong>
+                    </div>
+
+                    <span class="status-badge">
+                        Analyzed
+                    </span>
+                </header>
+
+                <div class="score-ring" style="--score: 86">
+                    <div>
+                        <strong>86</strong>
+                        <small>/100</small>
+                    </div>
+                </div>
+
+                <div class="metric-label">
+                    <span>Job match</span>
+                    <strong>78%</strong>
+                </div>
+
+                <div class="progress-bar">
+                    <span style="width: 78%"></span>
+                </div>
+
+                <div class="tag-list">
+                    <span>Python</span>
+                    <span>Flask</span>
+                    <span>SQL</span>
+                    <span>Git</span>
+                </div>
+
+                <div class="recommendation-card">
+                    <span>✦</span>
+
+                    <p>
+                        Add measurable impact to two project descriptions.
+                    </p>
+                </div>
+            </article>
+
+            <article class="floating-stat stat-one">
+                <strong>+24%</strong>
+                <span>keyword coverage</span>
+            </article>
+
+            <article class="floating-stat stat-two">
+                <strong>8</strong>
+                <span>skills detected</span>
+            </article>
         </div>
-    </div>
-
-    <div class="hero-visual reveal">
-        <article class="demo-analysis-card">
-            <header class="demo-card-header">
-                <div>
-                    <small>Resume health</small>
-                    <strong>Software Engineer Resume</strong>
-                </div>
-
-                <span class="status-badge">
-                    Analyzed
-                </span>
-            </header>
-
-            <div
-                class="score-ring"
-                style="--score: 86"
-            >
-                <div>
-                    <strong>86</strong>
-                    <small>/100</small>
-                </div>
-            </div>
-
-            <div class="metric-label">
-                <span>Job match</span>
-                <strong>78%</strong>
-            </div>
-
-            <div class="progress-bar">
-                <span style="width: 78%"></span>
-            </div>
-
-            <div class="tag-list">
-                <span>Python</span>
-                <span>Flask</span>
-                <span>SQL</span>
-                <span>Git</span>
-            </div>
-
-            <div class="recommendation-card">
-                <span>✦</span>
-
-                <p>
-                    Add measurable impact to two project descriptions.
-                </p>
-            </div>
-        </article>
-
-        <article class="floating-stat stat-one">
-            <strong>+24%</strong>
-            <span>keyword coverage</span>
-        </article>
-
-        <article class="floating-stat stat-two">
-            <strong>8</strong>
-            <span>skills detected</span>
-        </article>
-    </div>
-</section>
+    </section>
+</div>
 
 <section class="audience-strip container">
     <p>
@@ -120,10 +162,7 @@ ResumeIQ — Smarter Resume Analysis
     </div>
 </section>
 
-<section
-    class="section container"
-    id="features"
->
+<section class="section container" id="features">
     <header class="section-heading reveal">
         <span class="eyebrow">
             Everything in one workspace
@@ -202,10 +241,7 @@ ResumeIQ — Smarter Resume Analysis
     </div>
 </section>
 
-<section
-    class="section workflow-section container"
-    id="workflow"
->
+<section class="section workflow-section container" id="workflow">
     <header class="section-heading reveal">
         <span class="eyebrow">
             Simple workflow
@@ -248,10 +284,7 @@ ResumeIQ — Smarter Resume Analysis
         </h2>
     </div>
 
-    <a
-        class="button primary"
-        href="{{ url_for('signup') }}"
-    >
+    <a class="button primary" href="{{ url_for('signup') }}">
         Create free account
         <span>→</span>
     </a>
