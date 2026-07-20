@@ -20,10 +20,8 @@ class AnalysisResult(BaseModel):
         description="Resume and job description match score."
     )
     missing_keywords: list[str] = Field(
-        default_factory=list,
         description="Important job keywords missing from the resume."
     )
     suggestions: list[RewriteSuggestion] = Field(
-        default_factory=list,
         description="Concrete resume rewrite suggestions."
     )
