@@ -1,7 +1,7 @@
-import logging
 import os
 import tempfile
 from pathlib import Path
+from typing import Annotated
 
 from dotenv import load_dotenv
 from fastapi import (
@@ -10,8 +10,10 @@ from fastapi import (
     Form,
     HTTPException,
     UploadFile,
+    status,
 )
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.concurrency import run_in_threadpool
 
 from analyzer import extract_resume_text
 from gemini_service import (
@@ -24,314 +26,177 @@ from schemas import AnalysisResult
 
 load_dotenv()
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
-ALLOWED_EXTENSIONS = {"pdf", "docx", "txt"}
-
-frontend_urls = [
-    url.strip()
-    for url in os.getenv(
-        "FRONTEND_URL",
-        "http://localhost:3000",
-    ).split(",")
-    if url.strip()
-]
-
-
 app = FastAPI(
     title="AI Resume Screener API",
     description=(
-        "Upload a resume and compare it with a job description "
-        "using Gemini."
+        "Upload a PDF or DOCX resume and compare it "
+        "with a job description using Gemini."
     ),
     version="1.0.0",
 )
 
 
+frontend_url = os.getenv(
+    "FRONTEND_URL",
+    "http://localhost:3000",
+).rstrip("/")
+
+allowed_origins = [
+    frontend_url,
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=frontend_urls,
+    allow_origins=list(set(allowed_origins)),
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
 
 
+ALLOWED_EXTENSIONS = {".pdf", ".docx"}
+MAX_FILE_SIZE = 10 * 1024 * 1024
+CHUNK_SIZE = 1024 * 1024
+
+
 @app.get("/")
-def read_root() -> dict:
+def read_root() -> dict[str, str]:
+    """Return a basic API status message."""
+
     return {
-        "message": "AI Resume Screener backend is running.",
-        "documentation": "/docs",
+        "message": "AI Resume Screener backend is running."
     }
 
 
 @app.get("/health")
-def health_check() -> dict:
-    return {
-        "status": "healthy",
-    }
+def health_check() -> dict[str, str]:
+    """Return the API health status."""
 
-
-def get_file_extension(upload: UploadFile) -> str:
-    """
-    Extract and validate the uploaded file extension.
-    """
-
-    filename = upload.filename or ""
-
-    extension = (
-        Path(filename)
-        .suffix
-        .lower()
-        .lstrip(".")
-    )
-
-    if extension not in ALLOWED_EXTENSIONS:
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                "Unsupported file format. "
-                "Please upload a PDF, DOCX or TXT file."
-            ),
-        )
-
-    return extension
-
-
-async def save_upload_temporarily(
-    upload: UploadFile,
-) -> tuple[Path, str]:
-    """
-    Validate an uploaded file and save it temporarily.
-    """
-
-    extension = get_file_extension(upload)
-
-    file_content = await upload.read(
-        MAX_FILE_SIZE + 1
-    )
-
-    if not file_content:
-        raise HTTPException(
-            status_code=400,
-            detail="The uploaded file is empty.",
-        )
-
-    if len(file_content) > MAX_FILE_SIZE:
-        raise HTTPException(
-            status_code=413,
-            detail="The uploaded file exceeds the 10 MB limit.",
-        )
-
-    temporary_file = tempfile.NamedTemporaryFile(
-        mode="wb",
-        delete=False,
-        suffix=f".{extension}",
-    )
-
-    try:
-        temporary_file.write(file_content)
-        temporary_path = Path(
-            temporary_file.name
-        )
-    finally:
-        temporary_file.close()
-        await upload.close()
-
-    return temporary_path, extension
-
-
-async def extract_uploaded_file_text(
-    upload: UploadFile,
-    file_description: str,
-) -> str:
-    """
-    Save an uploaded file, extract its text and remove the
-    temporary file afterward.
-    """
-
-    temporary_path: Path | None = None
-
-    try:
-        (
-            temporary_path,
-            extension,
-        ) = await save_upload_temporarily(
-            upload
-        )
-
-        extracted_text = extract_resume_text(
-            temporary_path,
-            extension,
-        ).strip()
-
-        if not extracted_text:
-            raise HTTPException(
-                status_code=422,
-                detail=(
-                    f"No readable text was found in the "
-                    f"{file_description}. The file may be "
-                    "image-only or empty."
-                ),
-            )
-
-        return extracted_text
-
-    except HTTPException:
-        raise
-
-    except ValueError as error:
-        raise HTTPException(
-            status_code=422,
-            detail=str(error),
-        ) from error
-
-    except Exception as error:
-        logger.exception(
-            "Failed to extract text from %s.",
-            file_description,
-        )
-
-        raise HTTPException(
-            status_code=500,
-            detail=(
-                f"An unexpected error occurred while reading "
-                f"the {file_description}."
-            ),
-        ) from error
-
-    finally:
-        if (
-            temporary_path is not None
-            and temporary_path.exists()
-        ):
-            temporary_path.unlink(
-                missing_ok=True
-            )
+    return {"status": "healthy"}
 
 
 @app.post(
     "/analyze",
     response_model=AnalysisResult,
+    status_code=status.HTTP_200_OK,
 )
-async def analyze_resume_endpoint(
-    resume_file: UploadFile = File(
-        ...,
-        description=(
-            "Candidate resume in PDF, DOCX or TXT format."
-        ),
-    ),
-    job_description: str = Form(
-        default="",
-        description=(
-            "Job description pasted as text."
-        ),
-    ),
-    job_description_file: UploadFile | None = File(
-        default=None,
-        description=(
-            "Optional job description file in PDF, DOCX or TXT format."
-        ),
-    ),
+async def analyze_resume(
+    resume: Annotated[
+        UploadFile,
+        File(description="Resume file in PDF or DOCX format"),
+    ],
+    job_description: Annotated[
+        str,
+        Form(description="Job description text"),
+    ],
 ) -> AnalysisResult:
     """
     Extract resume text and compare it with a job description.
-
-    The job description can be pasted as text or uploaded as a
-    separate file.
     """
 
-    pasted_job_description = (
-        job_description.strip()
-    )
+    filename = resume.filename or ""
+    extension = Path(filename).suffix.lower()
 
-    has_job_file = (
-        job_description_file is not None
-        and bool(job_description_file.filename)
-    )
-
-    if pasted_job_description and has_job_file:
+    if extension not in ALLOWED_EXTENSIONS:
         raise HTTPException(
-            status_code=400,
-            detail=(
-                "Provide the job description either as pasted "
-                "text or as an uploaded file, not both."
-            ),
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail="Only PDF and DOCX resume files are supported.",
         )
 
-    if not pasted_job_description and not has_job_file:
+    cleaned_job_description = job_description.strip()
+
+    if not cleaned_job_description:
         raise HTTPException(
-            status_code=422,
-            detail=(
-                "A job description is required. Paste the text "
-                "or upload a job description file."
-            ),
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Job description cannot be empty.",
         )
 
-    resume_text = await extract_uploaded_file_text(
-        upload=resume_file,
-        file_description="resume",
-    )
-
-    if has_job_file:
-        final_job_description = (
-            await extract_uploaded_file_text(
-                upload=job_description_file,
-                file_description="job description",
-            )
-        )
-    else:
-        final_job_description = (
-            pasted_job_description
-        )
+    temp_path: Path | None = None
 
     try:
-        return analyze_with_gemini(
-            resume_text=resume_text,
-            job_description=final_job_description,
+        with tempfile.NamedTemporaryFile(
+            delete=False,
+            suffix=extension,
+        ) as temporary_file:
+            temp_path = Path(temporary_file.name)
+            total_size = 0
+
+            while True:
+                chunk = await resume.read(CHUNK_SIZE)
+
+                if not chunk:
+                    break
+
+                total_size += len(chunk)
+
+                if total_size > MAX_FILE_SIZE:
+                    raise HTTPException(
+                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                        detail="Resume file must not exceed 10 MB.",
+                    )
+
+                temporary_file.write(chunk)
+
+        if total_size == 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="The uploaded resume file is empty.",
+            )
+
+        resume_text = await run_in_threadpool(
+            extract_resume_text,
+            temp_path,
+            extension,
         )
 
-    except ValueError as error:
+        if not resume_text or not resume_text.strip():
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=(
+                    "No readable text could be extracted "
+                    "from the resume."
+                ),
+            )
+
+        result = await run_in_threadpool(
+            analyze_with_gemini,
+            resume_text,
+            cleaned_job_description,
+        )
+
+        return result
+
+    except HTTPException:
+        raise
+
+    except GeminiConfigurationError as error:
         raise HTTPException(
-            status_code=422,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(error),
         ) from error
 
-    except GeminiConfigurationError as error:
-        logger.exception(
-            "Gemini configuration error."
-        )
-
+    except GeminiAnalysisError as error:
         raise HTTPException(
-            status_code=500,
-            detail=(
-                "The AI service is not configured correctly."
-            ),
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=str(error),
         ) from error
 
-    except GeminiAnalysisError as error:
-        logger.exception(
-            "Gemini analysis failed."
-        )
-
+    except ValueError as error:
         raise HTTPException(
-            status_code=502,
-            detail=(
-                "The AI service could not complete the analysis. "
-                "Please try again shortly."
-            ),
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(error),
         ) from error
 
     except Exception as error:
-        logger.exception(
-            "Unexpected resume analysis error."
-        )
-
         raise HTTPException(
-            status_code=500,
-            detail=(
-                "An unexpected error occurred during analysis."
-            ),
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Resume analysis failed unexpectedly.",
         ) from error
+
+    finally:
+        await resume.close()
+
+        if temp_path is not None:
+            temp_path.unlink(missing_ok=True)
