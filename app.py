@@ -80,7 +80,7 @@ class User(UserMixin, db.Model):
         db.String(255),
         nullable=False,
     )
-
+    profile_image = db.Column(db.String(255), nullable=True)
     created_at = db.Column(
         db.DateTime,
         default=utc_now,
@@ -559,6 +559,48 @@ def delete_analysis(analysis_id):
     )
 
     return redirect(url_for("history"))
+
+
+ALLOWED_IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "webp"}
+
+
+def allowed_image(filename):
+    return (
+        "." in filename
+        and filename.rsplit(".", 1)[1].lower() in ALLOWED_IMAGE_EXTENSIONS
+    )
+
+
+@app.route("/profile/avatar", methods=["POST"])
+@login_required
+def update_avatar():
+    uploaded_file = request.files.get("profile_image")
+
+    if not uploaded_file or not uploaded_file.filename:
+        flash("Please select an image to upload.", "error")
+        return redirect(url_for("profile"))
+
+    if not allowed_image(uploaded_file.filename):
+        flash("Unsupported file format. Please upload a PNG, JPG or WEBP image.", "error")
+        return redirect(url_for("profile"))
+
+    original_filename = secure_filename(uploaded_file.filename)
+    extension = original_filename.rsplit(".", 1)[1].lower()
+    stored_filename = f"avatar_{current_user.id}_{uuid.uuid4().hex}.{extension}"
+    file_path = UPLOAD_DIR / stored_filename
+
+    uploaded_file.save(file_path)
+
+    if current_user.profile_image:
+        old_path = UPLOAD_DIR / current_user.profile_image
+        if old_path.exists():
+            old_path.unlink()
+
+    current_user.profile_image = stored_filename
+    db.session.commit()
+
+    flash("Profile picture updated successfully.", "success")
+    return redirect(url_for("profile"))
 
 
 @app.route("/profile", methods=["GET", "POST"])

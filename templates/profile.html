@@ -20,27 +20,67 @@ Profile — ResumeIQ
     </header>
 
     <div class="profile-grid">
-        <aside class="profile-summary panel">
-            <span class="large-avatar">
-                {{ current_user.full_name[0]|upper }}
-            </span>
+   
+   <aside class="profile-summary panel">
+    <form
+        method="POST"
+        action="{{ url_for('update_avatar') }}"
+        enctype="multipart/form-data"
+        id="avatarForm"
+    >
+        <div class="avatar-upload">
+            {% if current_user.profile_image %}
+                <img
+                    id="avatarPreview"
+                    class="large-avatar-img"
+                    src="{{ url_for('static', filename='uploads/' + current_user.profile_image) }}"
+                    alt="Profile picture"
+                >
+            {% else %}
+                <span class="large-avatar" id="avatarLetter">
+                    {{ current_user.full_name[0]|upper }}
+                </span>
+                <img id="avatarPreview" class="large-avatar-img" hidden alt="Profile picture">
+            {% endif %}
 
-            <h2>{{ current_user.full_name }}</h2>
-            <p>{{ current_user.email }}</p>
+            <label class="avatar-edit-btn" for="avatarInput">
+                <span aria-hidden="true">✎</span>
+            </label>
 
-            <div class="profile-detail">
-                <span>Member since</span>
+            <input
+                type="file"
+                id="avatarInput"
+                name="profile_image"
+                accept="image/png, image/jpeg, image/webp"
+                hidden
+            >
+        </div>
 
-                <strong>
-                    {{ current_user.created_at.strftime('%B %Y') }}
-                </strong>
-            </div>
+        <p id="avatarError" class="field-error" hidden>
+            Unsupported file format. Please upload a PNG, JPG or WEBP image.
+        </p>
 
-            <div class="profile-detail">
-                <span>Saved analyses</span>
-                <strong>{{ current_user.analyses|length }}</strong>
-            </div>
-        </aside>
+        <button class="button secondary small" id="avatarSubmit" type="submit" hidden>
+            Update profile picture
+        </button>
+    </form>
+
+    <h2>{{ current_user.full_name }}</h2>
+    <p>{{ current_user.email }}</p>
+
+    <div class="profile-detail">
+        <span>Member since</span>
+
+        <strong>
+            {{ current_user.created_at.strftime('%B %Y') }}
+        </strong>
+    </div>
+
+    <div class="profile-detail">
+        <span>Saved analyses</span>
+        <strong>{{ current_user.analyses|length }}</strong>
+    </div>
+</aside>
 
         <form
             class="profile-form panel"
@@ -91,4 +131,6 @@ Profile — ResumeIQ
     </div>
 </section>
 
+
 {% endblock %}
+

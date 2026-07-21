@@ -293,3 +293,34 @@ analysisForm?.addEventListener(
         }, 1100);
     }
 );
+
+      const avatarInput = document.getElementById("avatarInput");
+const avatarPreview = document.getElementById("avatarPreview");
+const avatarLetter = document.getElementById("avatarLetter");
+const avatarError = document.getElementById("avatarError");
+const avatarSubmit = document.getElementById("avatarSubmit");
+
+const allowedImageTypes = ["image/png", "image/jpeg", "image/webp"];
+
+avatarInput?.addEventListener("change", () => {
+    const file = avatarInput.files[0];
+    if (!file) return;
+
+    if (!allowedImageTypes.includes(file.type)) {
+        avatarError.hidden = false;
+        avatarSubmit.hidden = true;
+        avatarInput.value = "";
+        return;
+    }
+
+    avatarError.hidden = true;
+    avatarSubmit.hidden = false;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        avatarPreview.src = e.target.result;
+        avatarPreview.hidden = false;
+        avatarLetter?.setAttribute("hidden", "");
+    };
+    reader.readAsDataURL(file);
+});

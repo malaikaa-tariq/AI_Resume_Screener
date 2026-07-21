@@ -2527,3 +2527,37 @@ input:disabled {
         justify-content: flex-end;
     }
 }
+/* Avatar upload */
+
+.avatar-upload {
+    position: relative;
+    width: 90px;
+    margin: 0 auto 14px;
+}
+
+.large-avatar-img {
+    width: 90px;
+    height: 90px;
+    border-radius: 26px;
+    object-fit: cover;
+}
+
+.avatar-edit-btn {
+    position: absolute;
+    bottom: -4px;
+    right: -4px;
+    width: 28px;
+    height: 28px;
+    display: grid;
+    place-items: center;
+    color: #062016;
+    background: var(--primary);
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.field-error {
+    margin-top: 10px;
+    color: var(--danger);
+    font-size: 12px;
+}
