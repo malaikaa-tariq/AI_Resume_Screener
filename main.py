@@ -1,56 +1,202 @@
 import os
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+import tempfile
+from pathlib import Path
+from typing import Annotated
+
 from dotenv import load_dotenv
-from google import genai
+from fastapi import (
+    FastAPI,
+    File,
+    Form,
+    HTTPException,
+    UploadFile,
+    status,
+)
+from fastapi.middleware.cors import CORSMiddleware
+from starlette.concurrency import run_in_threadpool
+
+from analyzer import extract_resume_text
+from gemini_service import (
+    GeminiAnalysisError,
+    GeminiConfigurationError,
+    analyze_with_gemini,
+)
+from schemas import AnalysisResult
+
 
 load_dotenv()
 
-client = genai.Client()
+app = FastAPI(
+    title="AI Resume Screener API",
+    description=(
+        "Upload a PDF or DOCX resume and compare it "
+        "with a job description using Gemini."
+    ),
+    version="1.0.0",
+)
 
-app = FastAPI()
+
+frontend_url = os.getenv(
+    "FRONTEND_URL",
+    "http://localhost:3000",
+).rstrip("/")
+
+allowed_origins = [
+    frontend_url,
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
+    allow_origins=list(set(allowed_origins)),
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
 
-class ResumeData(BaseModel):
-    resume_text: str
-    job_description: str
+
+ALLOWED_EXTENSIONS = {".pdf", ".docx"}
+MAX_FILE_SIZE = 10 * 1024 * 1024
+CHUNK_SIZE = 1024 * 1024
+
 
 @app.get("/")
-def read_root():
-    return {"message": "Backend is running with the NEW Gemini SDK!"}
+def read_root() -> dict[str, str]:
+    """Return a basic API status message."""
 
-@app.post("/analyze")
-def analyze_resume(data: ResumeData):
-    try:
-        prompt = f"""
-        You are an expert ATS (Applicant Tracking System) and HR manager. 
-        Analyze the following resume text against the provided job description.
-        
-        Provide:
-        1. Match Percentage (0% to 100%)
-        2. Key Missing Skills
-        3. A short feedback summary on strengths and weaknesses.
+    return {
+        "message": "AI Resume Screener backend is running."
+    }
 
-        Resume Text:
-        {data.resume_text}
 
-        Job Description:
-        {data.job_description}
-        """
+@app.get("/health")
+def health_check() -> dict[str, str]:
+    """Return the API health status."""
 
-        response = client.models.generate_content(
-            model='gemini-3.5-flash',
-            contents=prompt,
+    return {"status": "healthy"}
+
+
+@app.post(
+    "/analyze",
+    response_model=AnalysisResult,
+    status_code=status.HTTP_200_OK,
+)
+async def analyze_resume(
+    resume: Annotated[
+        UploadFile,
+        File(description="Resume file in PDF or DOCX format"),
+    ],
+    job_description: Annotated[
+        str,
+        Form(description="Job description text"),
+    ],
+) -> AnalysisResult:
+    """
+    Extract resume text and compare it with a job description.
+    """
+
+    filename = resume.filename or ""
+    extension = Path(filename).suffix.lower()
+
+    if extension not in ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail="Only PDF and DOCX resume files are supported.",
         )
-        
-        return {"analysis": response.text}
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Gemini API Error: {str(e)}")
+    cleaned_job_description = job_description.strip()
+
+    if not cleaned_job_description:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Job description cannot be empty.",
+        )
+
+    temp_path: Path | None = None
+
+    try:
+        with tempfile.NamedTemporaryFile(
+            delete=False,
+            suffix=extension,
+        ) as temporary_file:
+            temp_path = Path(temporary_file.name)
+            total_size = 0
+
+            while True:
+                chunk = await resume.read(CHUNK_SIZE)
+
+                if not chunk:
+                    break
+
+                total_size += len(chunk)
+
+                if total_size > MAX_FILE_SIZE:
+                    raise HTTPException(
+                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                        detail="Resume file must not exceed 10 MB.",
+                    )
+
+                temporary_file.write(chunk)
+
+        if total_size == 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="The uploaded resume file is empty.",
+            )
+
+        resume_text = await run_in_threadpool(
+            extract_resume_text,
+            temp_path,
+            extension,
+        )
+
+        if not resume_text or not resume_text.strip():
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=(
+                    "No readable text could be extracted "
+                    "from the resume."
+                ),
+            )
+
+        result = await run_in_threadpool(
+            analyze_with_gemini,
+            resume_text,
+            cleaned_job_description,
+        )
+
+        return result
+
+    except HTTPException:
+        raise
+
+    except GeminiConfigurationError as error:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(error),
+        ) from error
+
+    except GeminiAnalysisError as error:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=str(error),
+        ) from error
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(error),
+        ) from error
+
+    except Exception as error:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Resume analysis failed unexpectedly.",
+        ) from error
+
+    finally:
+        await resume.close()
+
+        if temp_path is not None:
+            temp_path.unlink(missing_ok=True)
