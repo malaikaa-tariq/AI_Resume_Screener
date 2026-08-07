@@ -25,6 +25,7 @@ from gemini_service import (
     extract_text_from_media,
 )
 from schemas import AnalysisResult
+from study_upload import router as study_upload_router
 
 
 load_dotenv()
@@ -105,6 +106,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+app.include_router(study_upload_router)
 
 IMAGE_EXTENSIONS = {
     ".png",
