@@ -1,15 +1,36 @@
 import os
-import google.generativeai as genai
 
-genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+from google import genai
+from google.genai import types
 
-def generate_chunk_embeddings(chunks_data: list):
-    for item in chunks_data:
-        response = genai.embed_content(
-            model="models/gemini-embedding-001",
-            content=item["text"],
-            task_type="retrieval_document"
+
+EMBEDDING_MODEL = "gemini-embedding-001"
+EMBEDDING_DIMENSION = 768
+
+
+def generate_chunk_embeddings(chunks_data: list[dict]) -> list[dict]:
+    api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+
+    if not api_key:
+        raise RuntimeError(
+            "Set GEMINI_API_KEY or GOOGLE_API_KEY in the .env file."
         )
-        item["embedding"] = response["embedding"]
-        
-    return chunks_data
+
+    client = genai.Client(api_key=api_key)
+
+    try:
+        for item in chunks_data:
+            result = client.models.embed_content(
+                model=EMBEDDING_MODEL,
+                contents=item["text"],
+                config=types.EmbedContentConfig(
+                    task_type="RETRIEVAL_DOCUMENT",
+                    output_dimensionality=EMBEDDING_DIMENSION,
+                ),
+            )
+
+            item["embedding"] = list(result.embeddings[0].values)
+
+        return chunks_data
+    finally:
+        client.close()
