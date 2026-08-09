@@ -7,4 +7,5 @@ pydantic
 pypdf
 python-docx
 pytest
-httpxlangchain-text-splitters
+httpx
+langchain-text-splitters
