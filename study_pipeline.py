@@ -1,54 +1,66 @@
+import os
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
+from dotenv import load_dotenv
 
 from chunking_service import process_document_chunks
 from embedding_service import (
+    generate_chunk_embeddings,
     EMBEDDING_DIMENSION,
     EMBEDDING_MODEL,
-    generate_chunk_embeddings,
 )
+from qdrant_service import store_embedded_chunks, retrieve_relevant_chunks
 
+load_dotenv()
 
-router = APIRouter(
-    prefix="/api/v1/study",
-    tags=["study pipeline"],
-)
+router = APIRouter(prefix="/api/v1/study", tags=["study pipeline"])
 
 
 class StudyPipelineRequest(BaseModel):
-    text: str = Field(min_length=1)
+    text: str = Field(..., description="Raw text of the study document or syllabus")
+    source: str = Field(default="uploaded_doc", description="Source document name or tag")
+
+
+class StudyQueryRequest(BaseModel):
+    query: str = Field(..., description="Query topic or question to search for")
+    top_k: int = Field(default=5, ge=1, le=20, description="Number of top relevant chunks to retrieve")
 
 
 @router.post("/process")
-def process_study_document(request: StudyPipelineRequest) -> dict:
-    cleaned_text = request.text.strip()
-
-    if not cleaned_text:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Document text cannot be empty.",
-        )
-
-    chunks = process_document_chunks(cleaned_text)
-
-    if not chunks:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="No document chunks could be created.",
-        )
-
+def process_study_document(payload: StudyPipelineRequest):
     try:
+        chunks = process_document_chunks(payload.text)
         embedded_chunks = generate_chunk_embeddings(chunks)
-    except Exception as error:
+        stored = store_embedded_chunks(embedded_chunks, source=payload.source)
+    except Exception as exc:
         raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Embedding generation failed: {error}",
-        ) from error
-
+            status.HTTP_503_SERVICE_UNAVAILABLE, f"Ingestion failed: {exc}"
+        )
     return {
-        "message": "Chunking and embedding completed successfully.",
-        "chunk_count": len(embedded_chunks),
+        "message": "Document processed and stored in Qdrant",
+        "chunks_created": len(chunks),
+        "vectors_stored": stored,
         "embedding_model": EMBEDDING_MODEL,
         "embedding_dimension": EMBEDDING_DIMENSION,
-        "chunks": embedded_chunks,
     }
+
+
+@router.post("/retrieve")
+def retrieve_study_chunks(payload: StudyQueryRequest):
+    try:
+        embedded_query = generate_chunk_embeddings(
+            [{"text": payload.query, "chunk_index": 0}]
+        )
+        query_embedding = embedded_query[0]["embedding"]
+        results = retrieve_relevant_chunks(query_embedding, top_k=payload.top_k)
+    except Exception as exc:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE, f"Retrieval failed: {exc}"
+        )
+
+    if not results:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND,
+            "No relevant chunks found. Pehle document process karein.",
+        )
+    return {"query": payload.query, "top_k": payload.top_k, "results": results}

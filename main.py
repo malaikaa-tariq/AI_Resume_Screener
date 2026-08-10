@@ -36,12 +36,9 @@ logger = logging.getLogger(__name__)
 
 
 app = FastAPI(
-    title="AI Resume Screener API",
-    description=(
-        "Analyze PDF, DOCX, TXT, or image resumes against "
-        "pasted or uploaded job descriptions."
-    ),
-    version="3.1.0",
+    title="AI Study Companion API",
+    description="Analyze and process study documents, store embeddings, and retrieve relevant chunks.",
+    version="1.0.0"
 )
 
 
