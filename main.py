@@ -25,6 +25,7 @@ from gemini_service import (
     extract_text_from_media,
 )
 from schemas import AnalysisResult
+from study_pipeline import router as study_pipeline_router
 from study_upload import router as study_upload_router
 
 
@@ -108,6 +109,7 @@ app.add_middleware(
 
 
 app.include_router(study_upload_router)
+app.include_router(study_pipeline_router)
 
 IMAGE_EXTENSIONS = {
     ".png",
