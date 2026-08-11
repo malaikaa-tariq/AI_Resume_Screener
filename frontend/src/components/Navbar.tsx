@@ -25,6 +25,11 @@ import {
 
 const links = [
   {
+    href: "/study-companion",
+    label: "Study",
+    icon: "book" as const,
+  },
+  {
     href: "/features",
     label: "Features",
     icon: "sparkles" as const,
