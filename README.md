@@ -1,409 +1,192 @@
-# AI Resume Screener
+AI Resume Screener & Study Companion
 
-A full-stack AI-powered resume screening platform that compares a candidate's resume with a job description and provides truthful, practical, and actionable feedback using Google's Gemini API.
+A full-stack AI application built with Next.js and FastAPI. It can analyze resumes against job descriptions and turn uploaded study material into structured study plans.
 
-## Project Goal
+Main Features
 
-The goal of this project is to help job seekers understand how closely their resume matches a specific job opportunity.
+Resume Screener
 
-The application provides:
+Upload a resume and job description.
 
-- A match score from 0 to 100
-- Missing keywords and relevant skills
-- Section-specific improvement suggestions
-- Truthful resume rewrite recommendations
-- A recommended resume template
-- A complete resume builder with export options
+Get a match score, missing keywords, and improvement suggestions.
 
-The system is designed to avoid inventing qualifications, skills, or experience. Gemini is instructed to create suggested rewrites using only information already present in the uploaded resume.
+Build and export a resume.
 
-## Features
+Save profiles, drafts, and analysis history locally in the browser.
 
-### AI Resume Analysis
+Study Companion
 
-- Upload resumes in PDF, DOCX, PNG, JPG, JPEG, or WEBP format
-- Maximum resume size of 50 MB
-- Extract text from PDF and DOCX documents
-- Use Gemini document understanding for images and scanned PDFs
-- Paste a job description directly into the form
-- Upload a job description as PDF, DOCX, TXT, PNG, JPG, JPEG, or WEBP
-- Maximum job-description file size of 20 MB
-- Drag-and-drop file upload
-- Cancel an analysis while it is running
-- Reset the workspace and start another analysis
+Upload study documents or enter text.
 
-### Analysis Results
+Split content into chunks and generate Gemini embeddings.
 
-- Match score from 0 to 100
-- Missing keywords and skills
-- Section-by-section issue explanations
-- Truthful suggested rewrites
-- Recommended resume-template type
-- Explanation of why the template is suitable
-- Practical template advice
-- Copyable rewrite suggestions
-- Download option for the originally uploaded resume
+Store and retrieve relevant content with Qdrant.
 
-### Resume Builder
+Generate a structured JSON study plan.
 
-- Create and edit a complete resume
-- Live resume preview
-- Save resume drafts in the browser
-- Use profile information to prefill resume details
-- Select from six resume types:
-  - Chronological
-  - Functional
-  - Combination
-  - Targeted
-  - Academic CV
-  - Creative Portfolio
-- Export resumes as:
-  - PDF
-  - Word document
-  - HTML
-  - Plain text
+Tech Stack
 
-### User Workspace
+Frontend: Next.js, React, TypeScript, Tailwind CSS
 
-- Browser-local account registration and login
-- Separate data for each account created in the browser
-- Protected profile, history, and resume-builder pages
-- Analysis history for signed-in users
-- Editable profile information
-- Profile-picture upload
-- Direct profile-picture camera capture
-- Saved resume drafts
-- Saved analysis results
+Backend: FastAPI, Python, Pydantic
 
-> Authentication and user data storage are implemented locally in the browser for demonstration purposes. A production version should use secure server-side authentication, authorization, and database storage.
+AI: Google Gemini API
 
-### Themes and Interface
+Vector database: Qdrant
 
-- Responsive multipage interface
-- Animated navigation bar
-- Route-aware navigation indicator
-- Custom loading animations
-- Custom cursor effects
-- Responsive mobile layout
-- Custom not-found page
-- Six light themes:
-  - Light Peach
-  - Light Beige
-  - Light Rose
-  - Light Violet
-  - Light Blue
-  - Light Green
-- One Night Mode theme
+Testing: Pytest, HTTPX, ESLint
 
-## Application Pages
+Quick Setup
 
-- Home
-- Features
-- Analyze Resume
-- Resume Templates
-- Resume Builder
-- Analysis History
-- User Profile
-- Login
-- Signup
-- Custom Not Found page
+1. Clone the project
 
-## Tech Stack
-
-### Frontend
-
-- Next.js 16
-- React 19
-- TypeScript
-- Tailwind CSS 4
-- Browser Local Storage
-- IndexedDB
-
-### Backend
-
-- FastAPI
-- Uvicorn
-- Google Gemini API
-- `google-genai`
-- Pydantic
-- `pypdf`
-- `python-docx`
-- `python-multipart`
-- `python-dotenv`
-
-### Testing and Development
-
-- Pytest
-- HTTPX
-- ESLint
-- Next.js production build validation
-
-## Project Structure
-
-```text
-AI_Resume_Screener/
-├── frontend/
-│   ├── public/
-│   │   ├── images/
-│   │   └── logo.svg
-│   ├── src/
-│   │   ├── app/
-│   │   │   ├── analyze/
-│   │   │   ├── features/
-│   │   │   ├── history/
-│   │   │   ├── login/
-│   │   │   ├── profile/
-│   │   │   ├── resume-builder/
-│   │   │   ├── signup/
-│   │   │   ├── templates/
-│   │   │   ├── globals.css
-│   │   │   ├── layout.tsx
-│   │   │   ├── not-found.tsx
-│   │   │   └── page.tsx
-│   │   ├── components/
-│   │   └── lib/
-│   ├── .env.local
-│   ├── next.config.ts
-│   └── package.json
-├── tests/
-├── docs/
-│   └── evidence/
-│       ├── backend-tests-passed.png
-│       └── pytest-results.txt
-├── main.py
-├── analyzer.py
-├── gemini_service.py
-├── schemas.py
-├── requirements.txt
-├── .env.example
-└── README.md
-```
-
-## Getting Started
-
-### 1. Clone the Repository
-
-```bash
 git clone https://github.com/malaikaa-tariq/AI_Resume_Screener.git
-cd AI_Resume_Screener
-```
+Set-Location AI_Resume_Screener
 
-## Backend Setup
+2. Set up the backend
 
-### 2. Create a Virtual Environment
-
-#### Windows PowerShell
-
-```powershell
 python -m venv .venv
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\.venv\Scripts\Activate.ps1
-```
-
-#### macOS or Linux
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-```
-
-### 3. Install Backend Dependencies
-
-Run this command from the project root:
-
-```bash
-pip install -r requirements.txt
-```
-
-### 4. Configure Backend Environment Variables
-
-Copy `.env.example` to `.env`.
-
-#### Windows PowerShell
-
-```powershell
+python -m pip install -r requirements.txt
 Copy-Item .env.example .env
-```
 
-#### macOS or Linux
+Open .env and replace the placeholder with your real Gemini API key:
 
-```bash
-cp .env.example .env
-```
-
-Open `.env` and configure the following values:
-
-```env
-GEMINI_API_KEY=replace_with_your_private_api_key
+GEMINI_API_KEY=replace_with_your_api_key
 GEMINI_MODEL=gemini-3.5-flash
+STUDY_PLAN_MODEL=gemini-2.5-flash
+QDRANT_URL=http://localhost:6333
+QDRANT_API_KEY=
+QDRANT_COLLECTION_NAME=study_chunks
 FRONTEND_URL=http://localhost:3000
 FRONTEND_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
-```
 
-Never commit the real `.env` file.
+Do not commit the .env file or a real API key.
 
-### 5. Start the Backend
+3. Start Qdrant
 
-Run this command from the project root:
+First, open Docker Desktop. Then run:
 
-```bash
-python -m uvicorn main:app --reload --host 127.0.0.1 --port 8000
-```
+docker compose -f docker-compose.qdrant.yml up -d
 
-The backend will be available at:
+Check that Qdrant is running:
 
-- API: `http://127.0.0.1:8000`
-- API documentation: `http://127.0.0.1:8000/docs`
-- Health endpoint: `http://127.0.0.1:8000/health`
+docker ps
 
-## Frontend Setup
+Qdrant dashboard: http://localhost:6333/dashboard
 
-### 6. Navigate to the Frontend Folder
+4. Start the backend
 
-```bash
-cd frontend
-```
+python -m uvicorn main:app --reload --port 8000
 
-### 7. Install Frontend Dependencies
+Backend: http://127.0.0.1:8000
 
-```bash
-npm install
-```
+API documentation: http://127.0.0.1:8000/docs
 
-### 8. Configure Frontend Environment Variables
+5. Start the frontend
 
-Create a file named `.env.local` inside the `frontend` folder:
+Open another PowerShell terminal:
 
-```env
-NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
-```
+Set-Location frontend
+npm.cmd install
+npm.cmd run dev
 
-Never commit `frontend/.env.local`.
+Application: http://localhost:3000
 
-### 9. Start the Frontend
+Study Companion: http://localhost:3000/study-companion
 
-```bash
-npm run dev
-```
+Keep Docker Desktop, the backend terminal, and the frontend terminal running while using the Study Companion.
 
-Open the application in your browser:
+Study Companion Flow
 
-```text
-http://localhost:3000
-```
+Upload study material.
 
-Keep both the backend and frontend terminals open while using the application.
+The backend creates text chunks.
 
-## Environment Variables
+Gemini creates 768-dimensional embeddings.
 
-### Backend `.env`
+Qdrant stores the vectors and metadata.
 
-| Variable | Description | Example |
-|---|---|---|
-| `GEMINI_API_KEY` | Private Google Gemini API key | `replace_with_your_api_key` |
-| `GEMINI_MODEL` | Gemini model used for analysis | `gemini-3.5-flash` |
-| `FRONTEND_URL` | Main frontend origin allowed by CORS | `http://localhost:3000` |
-| `FRONTEND_ORIGINS` | Additional comma-separated frontend origins | `http://localhost:3000,http://127.0.0.1:3000` |
+Relevant chunks are retrieved for the requested topic.
 
-### Frontend `.env.local`
+Gemini generates a study plan using the retrieved content.
 
-| Variable | Description | Example |
-| `NEXT_PUBLIC_API_URL` | URL of the FastAPI backend | `http://127.0.0.1:8000` |
+Qdrant configuration
 
-> Never commit real `.env` or `.env.local` files. Only placeholder example files should be tracked in Git.
+Collection: study_chunks
 
-## Backend Validation
+Vector size: 768
 
-### Python Compilation Check
+Distance: Cosine
 
-Run this command from the project root:
+Embedding model: gemini-embedding-001
 
-```bash
-python -m py_compile main.py gemini_service.py schemas.py analyzer.py
-```
+Important API Endpoints
 
-## Running Backend Tests
+Method
 
-Run the test suite from the project root:
+Endpoint
 
-```bash
-pytest
-```
+Purpose
 
-## Backend Test Evidence
+POST
 
-The backend test suite covers resume extraction, API health checks, file validation, empty input handling, successful analysis, and Gemini failure handling.
+/analyze
 
-**Test result: 14 passed**
+Analyze a resume against a job description
 
-![Backend tests passed](docs/evidence/backend-tests-passed.png)
+POST
 
-The complete test output is available in:
+/api/v1/study/documents/upload
 
-```text
-docs/evidence/pytest-results.txt
-```
+Upload a study document
 
-## Frontend Validation
+POST
 
-Navigate to the frontend folder:
+/api/v1/study/process
 
-```bash
-cd frontend
-```
+Chunk, embed, and store study content
 
-### Run ESLint
+POST
 
-```bash
-npm run lint
-```
+/api/v1/study/retrieve
 
-### Create a Production Build
+Retrieve relevant study chunks
 
-```bash
-npm run build
-```
+POST
 
-### Run the Production Build
+/api/v1/study/plan
 
-```bash
-npm run start
-```
+Generate a study plan
 
-## API Endpoints
+Tests
 
-| Method | Endpoint | Description |
-| `GET` | `/` | Confirms that the backend is running |
-| `GET` | `/health` | Returns backend health status |
-| `POST` | `/analyze` | Analyzes a resume against a job description |
+Run the Week 3 backend tests from the project root:
 
-## Security
+python -m pytest tests/test_study_upload.py tests/test_study_pipeline.py tests/test_study_plan.py -v
 
-- Real Gemini API keys are not committed
-- `.env` and `.env.local` files are ignored by Git
-- Uploaded files are saved temporarily
-- Temporary files are removed after processing
-- File extensions and upload sizes are validated
-- Gemini rewrite suggestions are checked for truthfulness
-- User history, profile information, and drafts are separated by browser account
-- Browser-local authentication is intended for demonstration purposes only
+Expected result: 10 passed.
 
-## GitHub Workflow
+Check the Python files:
 
-The project follows this branching strategy:
+python -m py_compile study_plan_service.py study_pipeline.py qdrant_service.py embedding_service.py
 
-- `main` — stable release branch
-- `dev` — development and integration branch
-- `feature/*` — individual feature branches
+Check the frontend:
 
-### Development Rules
+Set-Location frontend
+npm.cmd run build
 
-- Do not push feature work directly to `main`
-- Create feature branches from `dev`
-- Push completed work to a `feature/*` branch
-- Open a pull request from the feature branch into `dev`
-- Request a review from another collaborator
-- The pull-request author should not merge their own pull request
-- Merge `dev` into `main` only through a reviewed pull request 
+Git Workflow
 
+Create feature branches from dev.
 
+Open pull requests into dev.
+
+Ask another team member to review the PR.
+
+Merge dev into main only after review.
+
+Security Note
+
+The current login, profile, history, and draft storage use browser-local data for demonstration. A production version should use secure server-side authentication and database storage.
