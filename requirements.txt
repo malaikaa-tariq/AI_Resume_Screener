@@ -9,3 +9,6 @@ python-docx
 pytest
 httpx
 langchain-text-splitters
+langchain-text-splitters
+qdrant-client
+
