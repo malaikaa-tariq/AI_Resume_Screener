@@ -7,7 +7,6 @@ A full-stack AI-powered resume screening platform that compares a candidate's re
 The goal of this project is to help job seekers understand how closely their resume matches a specific job opportunity.
 
 The application provides:
-
 - A match score from 0 to 100
 - Missing keywords and relevant skills
 - Section-specific improvement suggestions
